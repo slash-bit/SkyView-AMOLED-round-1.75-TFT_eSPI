@@ -1,11 +1,11 @@
 # SkyView Traffic Awareness Device
 
-SkyView is a traffic awareness device designed to display air traffic received through EC radio devices, such as **SoftRF SenseCap Card**, and visualize **FLARM NMEA** or **Garmin GDL90** data on its screen.
+SkyView is a traffic awareness device designed to display air traffic received through EC radio devices, such as **Seeed T1000-E SenseCap Card**, and visualize **FLARM NMEA** or **Garmin GDL90** data on its screen.
 
 ### Key Features:
-- This code is made for round AMOLED Colour Display called T-Display S3 1.75" AMOLED by LilyGo. **Please note, it is not yet compatible with similar Waveshare 1.75 AMOLED Display**
+- This code is made for round AMOLED Colour Display called T-Display S3 1.75" AMOLED from **LilyGo**. Please note, **SkyView AMOLED is not yet compatible with similar Waveshare 1.75 AMOLED Display**
 - Best suited as a companion device for **SoftRF hardware**, providing user-friendly visualization of nearby traffic.
-- Proven compatibility with **SkyEcho**, **Stratux**, and **PilotAware** devices, as reported by builders.
+- Proven compatibility with **SkyEcho**, **Stratux**, **PilotAware** and **PowerMouse+** devices, as reported by builders.
 
 ### Supported Data Input Methods:
 - **Classic Serial Interface**
