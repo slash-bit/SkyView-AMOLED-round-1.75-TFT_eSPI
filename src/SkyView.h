@@ -253,5 +253,6 @@ extern hardware_info_t hw_info;
 
 extern void shutdown(const char *);
 extern void Input_loop(void);
+extern bool SPIFFS_is_mounted;
 
 #endif /* SKYVIEW_H */

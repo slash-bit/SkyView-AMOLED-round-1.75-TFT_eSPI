@@ -64,15 +64,26 @@ std::vector<String> scanForBLEDevices(uint32_t scanTimeSeconds) {
   }
 
   NimBLEScan* scanner = NimBLEDevice::getScan();
-  
+
   scanner->setActiveScan(true);
   scanner->setInterval(1349);
   scanner->setWindow(449);
   scanner->clearResults();  // Free memory from last scan
 
+  // Disable watchdog during scan (if enabled) to prevent resets
+  bool wdt_status = loopTaskWDTEnabled;
+  if (wdt_status) {
+    disableLoopWDT();
+  }
+
   Serial.println("[BLE] Starting scan...");
-  NimBLEScanResults results = scanner->start(500, true);  // Convert seconds to milliseconds
+  NimBLEScanResults results = scanner->start(500, true);  // 500ms scan time
   Serial.printf("[BLE] Scan completed: %d device(s) found.\n", results.getCount());
+
+  // Re-enable watchdog after scan (if it was enabled)
+  if (wdt_status) {
+    enableLoopWDT();
+  }
 
   std::set<String> uniqueNames;
 
@@ -108,8 +119,10 @@ std::vector<String> allowedBLENames;
 
 void loadAllowedBLENames() {
   allowedBLENames.clear();
-  if (!SPIFFS.begin(true)) {
-    Serial.println("Failed to mount SPIFFS");
+
+  // Check if SPIFFS is already mounted (don't remount)
+  if (!SPIFFS_is_mounted) {
+    Serial.println("[BLE] SPIFFS not mounted, cannot load BLE connections");
     return;
   }
 
@@ -143,7 +156,7 @@ Bluetooth_ctl_t ESP32_BT_ctl = {
 /* LE */
 static NimBLERemoteCharacteristic* pRemoteCharacteristic;
 static NimBLEAdvertisedDevice* AppDevice;
-static NimBLEClient* pClient;
+static NimBLEClient* pClient = nullptr;  // Initialize to nullptr for safety
 
 static NimBLEUUID serviceUUID(SERVICE_UUID16);
 static NimBLEUUID charUUID(CHARACTERISTIC_UUID16);
@@ -348,7 +361,7 @@ static void ESP32_Bluetooth_loop()
         NimBLEScan* scan = NimBLEDevice::getScan();
         scan->setAdvertisedDeviceCallbacks(new AppAdvertisedDeviceCallbacks(), false);
         scan->setActiveScan(true);
-        scan->start(5, false);
+        scan->start(50, false);  // 50 deciseconds = 5 seconds
 #else
         BLEDevice::getScan()->start(3, false);
 #endif /* USE_NIMBLE */

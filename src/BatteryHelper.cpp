@@ -84,7 +84,7 @@ void PMU_setup() {
     return;
   }
 
-  setupWireIfNeeded(IIC_SDA, IIC_SCL);
+  setupWireIfNeeded(IIC_SDA, IIC_SCL, 400000);  // Use 400kHz I2C speed for better performance
 
 #if defined(I2C_SCAN)
   I2C_Scan();
