@@ -493,6 +493,7 @@ static void TFT_Draw_Radar()
         float rel_heading;
         // relative vertical string
         char rel_vertical_str[6];
+        uint16_t climbColor = Container[i].ClimbRate >= 3.5 ? TFT_RED : Container[i].ClimbRate >= 2 ? TFT_ORANGE :Container[i].ClimbRate >= 1.5 ? TFT_YELLOW : TFT_GREEN;
         // const char *rel_vertical_str = Container[i].RelativeVertical > 0 ? "↑" :
         //                                Container[i].RelativeVertical < 0 ? "↓" : "→";
         if (settings->units == UNITS_METRIC) {
@@ -631,6 +632,10 @@ static void TFT_Draw_Radar()
                 // sprite.setPivot(radar_center_x + x + 35, radar_center_y - y - 13); //set text slighly away from center
                 altSprite.pushToSprite(&sprite, radar_center_x + x + 35, radar_center_y - y - 13, TFT_BLACK); //ThisAircraft.Track is for Rotatiin back to horisontal
                  }
+            //show thermal dot if climbing
+            if (settings->show_thermals && Container[i].ClimbRate >= 1.5) {
+              pgSprite.fillCircle(sprite_center_x, sprite_center_y, 7, climbColor);
+            }
             if (Container[i].RelativeVertical < 500  && Container[i].distance < 2000) {
               if (blink) {
                 sprite.drawSmoothCircle(radar_center_x + x, radar_center_y - y, 10, color, TFT_BLACK);
@@ -696,6 +701,10 @@ static void TFT_Draw_Radar()
               } else {
               hgSprite.fillCircle(sprite_center_x, sprite_center_y, 9, color);
               }
+            //show thermal dot if climbing
+            if (settings->show_thermals && Container[i].ClimbRate >= 1.5) {
+              pgSprite.fillCircle(sprite_center_x, sprite_center_y, 7, climbColor);
+            }
             sprite.setPivot(radar_center_x + x, radar_center_y - y);
             hgSprite.pushRotated(&sprite, rel_heading, TFT_BLACK);
             if (isLabels) {
@@ -719,7 +728,6 @@ static void TFT_Draw_Radar()
           }
           case 7: // Paraglider
           {
-            uint16_t climbColor = Container[i].ClimbRate >= 3.5 ? TFT_RED : Container[i].ClimbRate >= 2 ? TFT_ORANGE :Container[i].ClimbRate >= 1.5 ? TFT_YELLOW : TFT_GREEN;
             if (!pgSprite.created()) {
               pgSprite.createSprite(36, 36);
               pgSprite.fillSprite(TFT_BLACK);
@@ -736,7 +744,8 @@ static void TFT_Draw_Radar()
             if (isBuddy && blink) {
               pgSprite.fillCircle(sprite_center_x, sprite_center_y, 7, TFT_WHITE);
               }
-            if (Container[i].ClimbRate >= 1.5) {
+            //Show thermal dot if climbing
+            if (settings->show_thermals && Container[i].ClimbRate >= 1.5) {
               pgSprite.fillCircle(sprite_center_x, sprite_center_y, 7, climbColor);
             }
             sprite.setPivot(radar_center_x + x, radar_center_y - y);

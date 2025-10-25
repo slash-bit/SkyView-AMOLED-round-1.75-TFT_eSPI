@@ -31,6 +31,8 @@ unsigned long TFTTimeMarker = 0;
 bool EPD_display_frontpage = false;
 
 int prev_TFT_view_mode = 0;
+int settings_page_number = 1;  // Track which settings page (1 or 2)
+
 extern bool wifi_sta;
 extern bool TFTrefresh;
 
@@ -415,6 +417,10 @@ void TFT_Up()
     case VIEW_MODE_TEXT:
       TFT_text_prev();
       break;
+    case VIEW_MODE_SETTINGS:
+      settings_page_number = 2;
+      settings_page();
+      break;
     default:
       break;
     }
@@ -432,6 +438,10 @@ void TFT_Down()
     case VIEW_MODE_TEXT:
       TFT_text_next();
       break;
+    case VIEW_MODE_SETTINGS:
+      settings_page_number = 1;
+      settings_page();
+      break;
     default:
       break;
     }
@@ -448,7 +458,7 @@ void settings_button(uint16_t x, uint16_t y, bool on) {
   }
 }
 
-void settings_page() {
+void settings_page_1() {
   if (xSemaphoreTake(spiMutex, portMAX_DELAY)) {
     delay(50);
     if (TFT_view_mode != VIEW_MODE_SETTINGS) {
@@ -475,11 +485,11 @@ void settings_page() {
 
     text_y = 200;
     sprite.setCursor(button_x - 300, text_y);
-    sprite.printf("Compass Page");
-    if (settings->compass) {
+    sprite.printf("Show Thermals");
+    if (settings->show_thermals) {
       settings_button(button_x, text_y, true);
     } else {
-      settings_button(button_x, text_y, false); 
+      settings_button(button_x, text_y, false);
     }
     
     text_y = 260;
@@ -504,35 +514,107 @@ void settings_page() {
     }
 
 
-    text_y = 400;
-    sprite.setCursor(button_x - 240, 380);
-    sprite.printf("Full Shutdown");
+    // Page indicator
+    sprite.setTextColor(TFT_DARKGREY, TFT_BLACK);
+    sprite.setFreeFont(&Orbitron_Light_24);
+    sprite.setCursor(210, 380);
+    sprite.printf("1/2");
 
+    // Back button
+    sprite.setTextColor(TFT_WHITE, TFT_BLACK);
     sprite.setCursor(button_x - 130, 440);
     sprite.printf("BACK");
     sprite.fillTriangle(180, 430, 197, 417, 197, 443, TFT_BLUEBUTTON);
     sprite.fillTriangle(160, 430, 180, 417, 180, 443, TFT_BLUEBUTTON);
 
+    lcd_PushColors(display_column_offset, 0, 466, 466, (uint16_t*)sprite.getPointer());
+    lcd_brightness(255);
+    xSemaphoreGive(spiMutex);
+  } else {
+    Serial.println("Failed to acquire SPI semaphore!");
+  }
+}
+
+void settings_page_2() {
+  if (xSemaphoreTake(spiMutex, portMAX_DELAY)) {
+    delay(50);
+    if (TFT_view_mode != VIEW_MODE_SETTINGS) {
+      prev_TFT_view_mode = TFT_view_mode;
+      TFT_view_mode = VIEW_MODE_SETTINGS;
+    }
+    uint16_t button_x = 340;
+    uint16_t text_y = 0;
+
+    sprite.fillSprite(TFT_BLACK);
+    sprite.setTextColor(TFT_WHITE, TFT_BLACK);
+    sprite.setTextDatum(MC_DATUM);
+    sprite.setFreeFont(&Orbitron_Light_24);
+    sprite.setCursor(160, 40);
+    sprite.printf("Settings");
+
+    text_y = 140;
+    sprite.setCursor(button_x - 300, text_y);
+    sprite.printf("Compass Page");
+    if (settings->compass) {
+      settings_button(button_x, text_y, true);
+    } else {
+      settings_button(button_x, text_y, false);
+    }
+
+    text_y = 200;
+    sprite.setCursor(button_x - 300, text_y);
+    sprite.printf("Voice Alerts");
+    // Placeholder - will be implemented later
+    settings_button(button_x, text_y, false);
+
+    text_y = 260;
+    sprite.setCursor(button_x - 300, text_y);
+    sprite.printf("Demo Mode");
+    // Placeholder - will be implemented later
+    settings_button(button_x, text_y, false);
+
+    text_y = 340;
+    sprite.setCursor(button_x - 240, 320);
+    sprite.printf("Power Options");
     sprite.setSwapBytes(true);
-    sprite.pushImage(button_x, 350, 48, 47, power_button_small);
+    sprite.pushImage(button_x, 290, 48, 47, power_button_small);
+
+    // Page indicator
+    sprite.setTextColor(TFT_DARKGREY, TFT_BLACK);
+    sprite.setFreeFont(&Orbitron_Light_24);
+    sprite.setCursor(210, 380);
+    sprite.printf("2/2");
+
+    // Back button
+    sprite.setTextColor(TFT_WHITE, TFT_BLACK);
+    sprite.setCursor(button_x - 130, 440);
+    sprite.printf("BACK");
+    sprite.fillTriangle(180, 430, 197, 417, 197, 443, TFT_BLUEBUTTON);
+    sprite.fillTriangle(160, 430, 180, 417, 180, 443, TFT_BLUEBUTTON);
 
     lcd_PushColors(display_column_offset, 0, 466, 466, (uint16_t*)sprite.getPointer());
     lcd_brightness(255);
     xSemaphoreGive(spiMutex);
-} else {
+  } else {
     Serial.println("Failed to acquire SPI semaphore!");
+  }
 }
 
+void settings_page() {
+  Serial.print("Previous view mode was: ");
+  Serial.println(prev_TFT_view_mode);
+  // Route to appropriate page based on settings_page_number
+  if (settings_page_number == 1) {
+    settings_page_1();
+  } else {
+    settings_page_2();
+  }
 }
-
-// Power menu state flag
-bool showingPowerMenu = false;
 
 void TFT_DoubleClick()
 {
   if (TFT_view_mode == VIEW_MODE_POWER) {
     // Double click when menu is showing = Full shutdown
-    showingPowerMenu = false;
     ESP32_TFT_fini("FULL POWER OFF");
     power_off();
   } else {
@@ -544,8 +626,6 @@ void TFT_DoubleClick()
 void TFT_show_power_menu()
 {
   if (xSemaphoreTake(spiMutex, portMAX_DELAY)) {
-    // Save current view mode so we can restore it
-    prev_TFT_view_mode = TFT_view_mode;
     // Set to power menu view mode
     TFT_view_mode = VIEW_MODE_POWER;
 
@@ -579,7 +659,6 @@ void TFT_show_power_menu()
     lcd_PushColors(display_column_offset, 0, 466, 466, (uint16_t*)sprite.getPointer());
     lcd_brightness(255);
 
-    showingPowerMenu = true;
     xSemaphoreGive(spiMutex);
   } else {
     Serial.println("Failed to acquire SPI semaphore!");

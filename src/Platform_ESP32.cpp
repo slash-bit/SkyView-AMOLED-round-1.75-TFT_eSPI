@@ -1163,9 +1163,8 @@ void handleEvent(AceButton* button, uint8_t eventType,
     case AceButton::kEventClicked:
       // This fires after double-click timeout if it was just a single click
       if (button == &button_mode) {
-        if (showingPowerMenu) {
+        if (TFT_view_mode == VIEW_MODE_POWER) {
           // Single click when menu is showing = Sleep
-          showingPowerMenu = false;
           shutdown("SLEEP");
         } else {
           // Single click when menu not showing = Change mode

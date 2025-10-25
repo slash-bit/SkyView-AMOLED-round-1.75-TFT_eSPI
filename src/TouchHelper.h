@@ -6,8 +6,5 @@ void Touch_setup();
 void touchTask(void *pvParameters);
 extern void touchWakeUp();
 
-// Power menu state
-extern bool showingPowerMenu;
-
 
 #endif // TOUCH_HELPER_H

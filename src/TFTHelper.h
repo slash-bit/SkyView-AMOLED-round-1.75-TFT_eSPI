@@ -82,6 +82,8 @@ void TFT_Task(void *);
 void TFT_show_power_menu();
 void TFT_DoubleClick();
 
+extern int TFT_view_mode;
+
 void TFT_radar_setup();
 void TFT_radar_loop();
 void TFT_radar_zoom();
