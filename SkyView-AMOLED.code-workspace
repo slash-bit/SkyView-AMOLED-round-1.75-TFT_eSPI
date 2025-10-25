@@ -2,6 +2,9 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"path": "../SkyView-AMOLED-T4S3"
 		}
 	],
 	"settings": {

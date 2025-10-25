@@ -12,6 +12,7 @@
 #include "EEPROMHelper.h"
 #include <TimeLib.h>
 #include "TrafficHelper.h"
+#include "BatteryHelper.h"
 // Create an instance of the CST9217 class
 
 TouchDrvCST92xx touchSensor;
@@ -137,91 +138,115 @@ void Touch_setup() {
       Serial.print("Model :");
       Serial.println(touchSensor.getModelName());
       touchSensor.setMaxCoordinates(466, 466); // Set touch max xy
+      touchSensor.setMirrorXY(true, true); 
   }
   xTaskCreatePinnedToCore(touchTask, "Touch Task", 4096, NULL, 1, &touchTaskHandle, 1);
   }
 
 void tapHandler(int x, int y) {
-  //It looks like the touch sensor is upside down so we need to flip the coordinates
-  //x = LCDWIDTH - x;  
-  //y = LCDHIEGHT - y;
+  // Touch coordinates are now properly mirrored via setMirrorXY() in Touch_setup()
   Serial.println("Tap detected at coordinates: " + String(x) + ", " + String(y));
+
+  // Handle power menu taps
+  if (TFT_view_mode == VIEW_MODE_POWER) {
+    // Sleep button (top button: 83,160 to 383,240)
+    if (x > 83 && x < 383 && y > 160 && y < 240) {
+      Serial.println("Sleep selected from power menu");
+      shutdown("SLEEP");
+      return;
+    }
+    // Full Shutdown button (bottom button: 83,260 to 383,340)
+    else if (x > 83 && x < 383 && y > 260 && y < 340) {
+      Serial.println("Full Shutdown selected from power menu");
+      ESP32_TFT_fini("FULL POWER OFF");
+      power_off();
+      return;
+    }
+    // Any other tap dismisses the menu and restores previous view
+    else {
+      Serial.println("Power menu dismissed");
+      TFT_view_mode = VIEW_MODE_SETTINGS;
+      settings_page();
+      return;
+    }
+  }
+
   bool hasFix = settings->protocol == PROTOCOL_NMEA  ? isValidGNSSFix() : false;
-  if (LCD_WIDTH - x > 290 && LCD_WIDTH - x < 400 && LCD_HEIGHT - y > 360 && LCD_HEIGHT - y <  466
+  if (x > 290 && x < 400 && y > 360 && y < 466
     && (TFT_view_mode == VIEW_MODE_TEXT || (TFT_view_mode == VIEW_MODE_RADAR && !hasFix))) {
     Serial.println("Going to SettingsPage ");
     settings_page();
-  } 
-  else if (LCD_WIDTH - x > 340 && LCD_WIDTH - x < 410 && LCD_HEIGHT - y > 340 && LCD_HEIGHT - y < 415
+  }
+
+  else if (x > 160 && x < 330 && y > 410 && y < 466
     && TFT_view_mode == VIEW_MODE_SETTINGS) {
-    //Sleep device and wake up on button press wake up button is PIN 0
-    Serial.println("Going to Sleep ");
-    // vTaskDelete(touchTaskHandle);
-    // touchTaskHandle = NULL;
-    shutdown("SLEEP");
-    // ESP32_TFT_fini("SLEEP");
-    // delay(1000);
-    // ESP32_fini();
-    // delay(1000);
-  } 
-  else if (LCD_WIDTH - x > 160 && LCD_WIDTH - x < 330 && LCD_HEIGHT - y > 410 && LCD_HEIGHT - y < 466
-    && TFT_view_mode == VIEW_MODE_SETTINGS) {
-    //Back button
-    Serial.println("Going Back to previous page ");
+    // Back button - reset to page 1 when leaving settings
+    extern int settings_page_number;
+    settings_page_number = 1;
     TFT_Mode(true);
   } 
-  else if (LCD_WIDTH - x > 320 && LCD_WIDTH - x < 400 && LCD_HEIGHT - y > 110 && LCD_HEIGHT - y < 170
+  // Settings Page 1 tap handlers
+  else if (x > 320 && x < 420 && y > 110 && y < 170
     && TFT_view_mode == VIEW_MODE_SETTINGS) {
-    //Traffic Filter +- 500m
-    Serial.println("Changing Traffic Filter +- 500m ");
-    if (settings->filter  == TRAFFIC_FILTER_500M) {
-      settings->filter  = TRAFFIC_FILTER_OFF;
+    extern int settings_page_number;
+    if (settings_page_number == 1) {
+      // Traffic Filter +- 500m
+      if (settings->filter == TRAFFIC_FILTER_500M) {
+        settings->filter = TRAFFIC_FILTER_OFF;
+      } else {
+        settings->filter = TRAFFIC_FILTER_500M;
+      }
       settings_page();
     }
-    else {
-      settings->filter  = TRAFFIC_FILTER_500M;
+      else if (settings_page_number == 2) {
+      // Compass Page toggle
+      settings->compass = !settings->compass;
       settings_page();
     }
-  } 
-  else if (LCD_WIDTH - x > 320 && LCD_WIDTH - x < 400 && LCD_HEIGHT - y > 227 && LCD_HEIGHT - y < 290 && TFT_view_mode == VIEW_MODE_SETTINGS) {
-    //Radar Orientation North Up / Track Up
-    Serial.println("Changing Radar Orientation North Up / Track Up ");
-    if (settings->orientation  == DIRECTION_NORTH_UP) {
-      settings->orientation  = DIRECTION_TRACK_UP;
+  }
+  else if (x > 320 && x < 420 && y > 170 && y < 230
+    && TFT_view_mode == VIEW_MODE_SETTINGS) {
+    extern int settings_page_number;
+    if (settings_page_number == 1) {
+      // Show Thermals toggle
+      settings->show_thermals = !settings->show_thermals;
+      settings_page();
+    } else if (settings_page_number == 2) {
+      // Voice Alerts toggle
+      //TODO: Voice alerts
       settings_page();
     }
-    else {
-      settings->orientation  = DIRECTION_NORTH_UP;
+  }
+  else if (x > 320 && x < 420 && y > 227 && y < 290
+    && TFT_view_mode == VIEW_MODE_SETTINGS) {
+    extern int settings_page_number;
+    if (settings_page_number == 1) {
+      // Radar Orientation North Up / Track Up
+      if (settings->orientation == DIRECTION_NORTH_UP) {
+        settings->orientation = DIRECTION_TRACK_UP;
+      } else {
+        settings->orientation = DIRECTION_NORTH_UP;
+      }
+      settings_page();
+    } else if (settings_page_number == 2) {
+      // Demo mode toggle
+      // TODO: Demo mode
       settings_page();
     }
-  } 
-  else if (LCD_WIDTH - x > 320 && LCD_WIDTH - x < 400 && LCD_HEIGHT - y > 290 && LCD_HEIGHT - y < 350 && TFT_view_mode == VIEW_MODE_SETTINGS) {
-    //Enable Labels (Initials)
-    Serial.println("Toggle Labels ");
-    if (!isLabels) {
-      isLabels = true;
-      settings->show_labels = true;
+  }
+  else if (x > 320 && x < 420 && y > 290 && y < 420
+    && TFT_view_mode == VIEW_MODE_SETTINGS) {
+    extern int settings_page_number;
+    if (settings_page_number == 1) {
+      // Show Labels toggle
+      isLabels = !isLabels;
+      settings->show_labels = isLabels;
       settings_page();
+    } else if (settings_page_number == 2) {
+        TFT_show_power_menu();
     }
-    else {
-      isLabels = false;
-      settings->show_labels = false;
-      settings_page();
-    }
-  } 
-  else if (LCD_WIDTH - x > 320 && LCD_WIDTH - x < 400 && LCD_HEIGHT - y > 170 && LCD_HEIGHT - y < 230 && TFT_view_mode == VIEW_MODE_SETTINGS) {
-    //Show Compass Page
-    Serial.println("Changing Compass View ");
-    if (!settings->compass) {
-      settings->compass = true;
-      settings_page();
-    }
-    else {
-      settings->compass = false;
-      settings_page();
-    }
-  } 
-  else if (LCD_WIDTH - x > 400 && LCD_WIDTH - x < 466 && LCD_HEIGHT - y > 170 && LCD_HEIGHT - y < 280 && TFT_view_mode == VIEW_MODE_TEXT) {
+  }
+  else if (x > 400 && x < 466 && y > 170 && y < 280 && TFT_view_mode == VIEW_MODE_TEXT) {
     //Togle Average Vario
     if (!show_avg_vario) {
       show_avg_vario = true;
@@ -231,7 +256,7 @@ void tapHandler(int x, int y) {
     }
     TFTTimeMarker = 0; // Force update of the display
   } else if (TFT_view_mode == VIEW_MODE_RADAR) {
-    findTouchedTarget(LCD_WIDTH - x, LCD_HEIGHT - y);
+    findTouchedTarget(x, y);
 
   } else {
     Serial.println("No Tap match found...");
@@ -276,20 +301,22 @@ void touchTask(void *parameter) {
           // Swipe detection logic
           if (duration < 500) { // Limit gesture duration
             if (abs(deltaX) > abs(deltaY)) { // Horizontal swipe
-              if (deltaX > 30) {
-                Serial.println("Swipe Left");
-                TFT_Mode(true);
-              } else if (deltaX < -30) {
-                Serial.println("Swipe Right");
-                TFT_Mode(false);
-              }
+
+                // Normal view mode navigation
+                if (deltaX < -30) {
+                  Serial.println("Swipe Left");
+                  TFT_Mode(true);
+                } else if (deltaX > 30) {
+                  Serial.println("Swipe Right");
+                  TFT_Mode(false);
+                }
             } else if (abs(deltaX) < abs(deltaY)) { // Vertical swipe
-                if (deltaY > 50) {
-                  Serial.println("Swipe Up - Radar Zoom Out");
+                if (deltaY < -50) {
+                  Serial.println("Swipe Up");
                   TFT_Up();
 
-                } else if (deltaY < -50) {
-                  Serial.println("Swipe Down - Radar Zoom In");
+                } else if (deltaY > 50) {
+                  Serial.println("Swipe Down");
                   TFT_Down();
                 }
               } else if (abs(deltaX) < 50 && abs(deltaY) < 50) {
@@ -299,10 +326,8 @@ void touchTask(void *parameter) {
                   // Serial.println("Tap");
                   delay(100); // Debounce delay
                   tapHandler(endX, endY); // Call tap handler with coordinates
+                }
               }
-
-              }
-  
             }
             else if (duration > 500 && duration < 2000 && abs(deltaX) < 50 && abs(deltaY) < 50) {
               Serial.println("Long Press");
@@ -313,7 +338,6 @@ void touchTask(void *parameter) {
           endX = endY = -1;
         }
       }
-  
       
     }
   

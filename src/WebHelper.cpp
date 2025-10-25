@@ -88,6 +88,7 @@ static const char about_html[] PROGMEM = "<html>\
 <p>E-mail: mo\
 she.braner\
 @gmail.com</p>\
+<p>Updated: Graphic design / ESP32-S3 AMOLED screen conversion <b>Vlad Belayev - 2025</b></p>\
 <h2 align=center>Credits</h2>\
 <p align=center>(in historical order)</p>\
 <table width=100%%>\
@@ -97,16 +98,18 @@ she.braner\
 <tr><th align=left>Hristo Gochkov</th><td align=left>Arduino core for ESP32</td></tr>\
 <tr><th align=left>JS Foundation</th><td align=left>jQuery library</td></tr>\
 <tr><th align=left>Mike McCauley</th><td align=left>BCM2835 C library</td></tr>\
-<tr><th align=left>Jean-Marc Zingg</th><td align=left>GxEPD2 library</td></tr>\
-<tr><th align=left>Adafruit Industries</th><td align=left>SSD1306 and GFX libraries</td></tr>\
+<tr><th align=left>Bodmer</th><td align=left>TFT_eSPI graphics library</td></tr>\
+<tr><th align=left>Benoit Blanchon</th><td align=left>ArduinoJson library</td></tr>\
 <tr><th align=left>Ryan David</th><td align=left>GDL90 decoder</td></tr>\
+<tr><th align=left>h2zero (Ryan Powell)</th><td align=left>NimBLE-Arduino BLE library</td></tr>\
 <tr><th align=left>Arundale Ramanathan</th><td align=left>uCDB Arduino library</td></tr>\
 <tr><th align=left>FlarmNet<br>GliderNet</th><td align=left>aircrafts data</td></tr>\
-<tr><th align=left>Shenzhen Xin Yuan<br>(LilyGO) ET company</th><td align=left>TTGO T5S V1.9 board</td></tr>\
-<tr><th align=left>Tuan Nha</th><td align=left>ESP32 I2S WAV player</td></tr>\
+<tr><th align=left>LewisHe</th><td align=left>SensorsLib &amp; XPowersLib</td></tr>\
+<tr><th align=left>ESPHome</th><td align=left>ESP32-audioI2S library</td></tr>\
+<tr><th align=left>Shenzhen Xin Yuan<br>(LilyGO) ET company</th><td align=left>T-Display-S3-AMOLED board</td></tr>\
+<tr><th align=left>Waveshare Electronics</th><td align=left>AMOLED 1.75&quot; display</td></tr>\
 <tr><th align=left>Brian Park</th><td align=left>AceButton library</td></tr>\
 <tr><th align=left>flashrom.org project</th><td align=left>Flashrom library</td></tr>\
-<tr><th align=left>Evandro Copercini</th><td align=left>ESP32 BT SPP library</td></tr>\
 </table>\
 <hr>\
 Copyright (C) 2019-2022 &nbsp;&nbsp;&nbsp; Linar Yusupov\
@@ -720,7 +723,7 @@ void handleRoot() {
   time_t timestamp = now();
   char str_Vcc[8];
 
-  size_t size = 2400;
+  size_t size = 3200;
   char *offset;
   size_t len = 0;
 
@@ -733,7 +736,7 @@ void handleRoot() {
   dtostrf(vdd, 4, 2, str_Vcc);
 
   const char* charge_status_str = charging_status_string(charging_status());
-  String chargingCurrent = String(read_SY6970_charge_current());
+  String chargingCurrent = String(read_PMU_charge_current());
 
   int cpu_freq = get_cpu_frequency_mhz();
   String lastBatteryLog = formatBatteryLog(getLastBatteryLogEntry());

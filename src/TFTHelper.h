@@ -72,7 +72,6 @@ typedef struct navbox_struct
 
 void TFT_setup();
 void TFT_loop();
-void TFT_fini(const char *);
 
 void TFT_Mode(boolean next);
 void TFT_Up();
@@ -80,6 +79,10 @@ void TFT_Down();
 void TFT_Message(const char *, const char *);
 void TFT_Update_Sync(int);
 void TFT_Task(void *);
+void TFT_show_power_menu();
+void TFT_DoubleClick();
+
+extern int TFT_view_mode;
 
 void TFT_radar_setup();
 void TFT_radar_loop();

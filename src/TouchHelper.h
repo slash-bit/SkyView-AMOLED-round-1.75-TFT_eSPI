@@ -7,5 +7,4 @@ void touchTask(void *pvParameters);
 extern void touchWakeUp();
 
 
-
 #endif // TOUCH_HELPER_H

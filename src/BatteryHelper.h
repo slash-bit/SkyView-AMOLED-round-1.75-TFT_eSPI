@@ -43,5 +43,6 @@ extern int read_PMU_charging_status(void);
 extern void PMU_setup(void);
 extern int charging_status();
 extern void battery_fini(void);
+extern void power_off(void);
 
 #endif /* BATTERYHELPER_H */

@@ -8,7 +8,7 @@
  * @License: GPL 3.0
  */
 #include "Arduino_DriveBus_Library.h"
-#include "pin_config.h"
+#include "../pins_config.h"
 
 static size_t CycleTime = 0;
 

@@ -197,6 +197,7 @@ void ESP32_TFT_fini(const char *msg)
     lcd_PushColors(display_column_offset, 0, 466, 466, (uint16_t*)sprite.getPointer());
     delay(2000);
     lcd_brightness(0);
+    lcd_sleep();
     xSemaphoreGive(spiMutex);
   } else {
     Serial.println("Failed to acquire SPI semaphore!");
@@ -205,18 +206,19 @@ void ESP32_TFT_fini(const char *msg)
 
 void ESP32_fini()
 {
-  WiFi_fini();
-  battery_fini();
-  // SPI.end();
   Serial.println("Putting device to deep sleep...");
   delay(1000);
-  lcd_sleep();
   BuddyManager::clearBuddyList();
   EEPROM_store();
   delay(1000);
   gpio_hold_en(GPIO_NUM_0);
-  esp_sleep_enable_ext0_wakeup(SLEEP_WAKE_UP_INT, LOW);
+  // make sure BOOT button is the only wake up source
+  esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
+  esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, LOW);
   SPI.end();
+#if defined (XPOWERS_CHIP_AXP2101)
+  prepare_AXP2101_deep_sleep();
+#endif
   esp_deep_sleep_start();
 }
 
@@ -1129,43 +1131,65 @@ AceButton button_mode(BUTTON_MODE_PIN);
 // AceButton button_up  (SOC_BUTTON_UP_T5S);
 // AceButton button_down(SOC_BUTTON_DOWN_T5S);
 
+// Track if long press just opened the menu
+static bool justOpenedMenu = false;
+
+// Button task handle
+TaskHandle_t buttonTaskHandle = NULL;
+
+// Forward declaration
+void buttonTask(void *parameter);
+
 // The event handler for the button.
 void handleEvent(AceButton* button, uint8_t eventType,
     uint8_t buttonState) {
 
-// #if 0
-  // Print out a message for all events.
-  if        (button == &button_mode) {
-    Serial.print(F("MODE "));
-  // } else if (button == &button_up) {
-  //   Serial.print(F("UP   "));
-  // } else if (button == &button_down) {
-  //   Serial.print(F("DOWN "));
-  // }
-
-  Serial.print(F("handleEvent(): eventType: "));
-  Serial.print(eventType);
-  Serial.print(F("; buttonState: "));
-  Serial.println(buttonState);
-// #endif
-
   switch (eventType) {
     case AceButton::kEventPressed:
+      // Button pressed - no action
       break;
+
     case AceButton::kEventReleased:
+      // With suppress features, RELEASED acts as single click (immediate)
+      // CLICKED event comes later if no double-click detected
       if (button == &button_mode) {
-        TFT_Mode(true);
+        // Clear the flag after any release
+        justOpenedMenu = false;
+
+        // Don't handle as click here - let CLICKED handle it after delay
       }
       break;
+
+    case AceButton::kEventClicked:
+      // This fires after double-click timeout if it was just a single click
+      if (button == &button_mode) {
+        if (TFT_view_mode == VIEW_MODE_POWER) {
+          // Single click when menu is showing = Sleep
+          shutdown("SLEEP");
+        } else {
+          // Single click when menu not showing = Change mode
+          TFT_Mode(true);
+        }
+      }
+      break;
+
+    case AceButton::kEventDoubleClicked:
+      if (button == &button_mode) {
+      // Double click when menu not showing = Restore previous view
+          TFT_DoubleClick();
+      }
+      break;
+
     case AceButton::kEventLongPressed:
       if (button == &button_mode) {
-        shutdown("NORMAL OFF");
-        Serial.println(F("This will never be printed."));
+        // Long press - show power options menu
+        justOpenedMenu = true;  // Set flag to ignore the release after long press
+        TFT_show_power_menu();
       }
       break;
   }
 }
-    }
+  
 
 /* Callbacks for push button interrupt */
 // void onModeButtonEvent() {
@@ -1184,28 +1208,44 @@ static void ESP32_Button_setup()
 {
   int mode_button_pin = BUTTON_MODE_PIN;
   // Button(s) uses internal pull up resistor.
-  pinMode(mode_button_pin, INPUT);
+  pinMode(mode_button_pin, INPUT_PULLUP);
 
-  button_mode.init(mode_button_pin);
+  button_mode.init(mode_button_pin, HIGH, 0);  // Active LOW button (pressed = LOW)
 
   // Configure the ButtonConfig with the event handler, and enable all higher
   // level events.
   ButtonConfig* ModeButtonConfig = button_mode.getButtonConfig();
   ModeButtonConfig->setEventHandler(handleEvent);
-  ModeButtonConfig->setFeature(ButtonConfig::kFeatureClick);
+
+  // Enable features - following AceButton example for DoubleClick
+  ModeButtonConfig->setFeature(ButtonConfig::kFeatureDoubleClick);
   ModeButtonConfig->setFeature(ButtonConfig::kFeatureLongPress);
+  ModeButtonConfig->setFeature(ButtonConfig::kFeatureSuppressClickBeforeDoubleClick);
+  ModeButtonConfig->setFeature(ButtonConfig::kFeatureSuppressAfterDoubleClick);
+  ModeButtonConfig->setFeature(ButtonConfig::kFeatureSuppressAfterLongPress);
+
+  // Set timing parameters
   ModeButtonConfig->setDebounceDelay(15);
-  ModeButtonConfig->setClickDelay(100);
-  ModeButtonConfig->setDoubleClickDelay(1000);
+  ModeButtonConfig->setClickDelay(300);
+  ModeButtonConfig->setDoubleClickDelay(400);
   ModeButtonConfig->setLongPressDelay(2000);
 
-  // attachInterrupt(digitalPinToInterrupt(mode_button_pin), onModeButtonEvent, CHANGE );
+  // Create dedicated button task pinned to core 1 (same as touch task)
+  xTaskCreatePinnedToCore(buttonTask, "Button Task", 4096, NULL, 1, &buttonTaskHandle, 1);
+}
 
+// Button task - runs continuously to check button state
+void buttonTask(void *parameter) {
+  while(true) {
+    button_mode.check();
+    vTaskDelay(pdMS_TO_TICKS(5)); // Check every 5ms for very responsive detection
+  }
 }
 
 static void ESP32_Button_loop()
 {
-  button_mode.check();
+  // Button checking now happens in dedicated task
+  // This function kept for compatibility but does nothing
 }
 
 static void ESP32_Button_fini()

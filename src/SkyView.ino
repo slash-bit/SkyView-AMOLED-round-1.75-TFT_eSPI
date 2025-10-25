@@ -71,6 +71,8 @@ hardware_info_t hw_info = {
   .display  = DISPLAY_NONE
 };
 
+bool SPIFFS_is_mounted = false;
+
 /* Poll input source(s) */
 void Input_loop() {
   switch (settings->protocol)
@@ -107,8 +109,10 @@ void setup()
   Serial.println(F(" KB"));
   if (!SPIFFS.begin(true)) {
     Serial.println("SPIFFS Mount Failed");
+    SPIFFS_is_mounted = false;
     return;
   }
+  SPIFFS_is_mounted = true;
   Serial.println("SPIFFS mounted successfully");
   Serial.print("SPIFFS Total space: ");
   Serial.println(SPIFFS.totalBytes());
@@ -272,5 +276,12 @@ void shutdown(const char *msg)
 #if defined(BUTTONS)
   SoC->Button_fini();
 #endif /* BUTTONS */
+  battery_fini();
+  //TODO: Task delete
+  // if (touchTaskHandle != NULL) {
+  //   vTaskDelete(touchTaskHandle);
+  //   touchTaskHandle = NULL;
+  // }
+  
   ESP32_fini();
 }

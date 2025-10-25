@@ -25,7 +25,7 @@
 #include <Arduino.h>
 #endif /* ARDUINO */
 
-#define SKYVIEW_FIRMWARE_VERSION  "MB07cVB006c"
+#define SKYVIEW_FIRMWARE_VERSION  "MB07cVB007"
 #define SKYVIEW_IDENT     "SkyView-"
 
 #define DEFAULT_AP_SSID   "SoftRF-abc123"
@@ -171,7 +171,8 @@ enum
 	VIEW_MODE_TABLE,
 	VIEW_MODE_TEXT,
 	VIEW_MODE_COMPASS,
-	VIEW_MODE_SETTINGS
+	VIEW_MODE_SETTINGS,
+	VIEW_MODE_POWER
 };
 
 enum
@@ -253,5 +254,6 @@ extern hardware_info_t hw_info;
 
 extern void shutdown(const char *);
 extern void Input_loop(void);
+extern bool SPIFFS_is_mounted;
 
 #endif /* SKYVIEW_H */
