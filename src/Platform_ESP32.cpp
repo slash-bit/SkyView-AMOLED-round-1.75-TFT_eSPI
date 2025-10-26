@@ -48,7 +48,12 @@
 
 #include <esp_wifi.h>
 #include <esp_bt.h>
+#include <esp_sleep.h>
+#include <driver/gpio.h>
+#include <driver/rtc_io.h>
+#include <Wire.h>
 #include "Arduino_DriveBus_Library.h"
+#include "../pins_config.h"
 
 #define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
 #define TIME_TO_SLEEP  28        /* Time ESP32 will go to sleep (in seconds) */
@@ -211,14 +216,36 @@ void ESP32_fini()
   BuddyManager::clearBuddyList();
   EEPROM_store();
   delay(1000);
+
+  // Shutdown peripherals to minimize power consumption
+
+  // Isolate GPIO pads to prevent leakage current in deep sleep
+  rtc_gpio_isolate(GPIO_NUM_16);  // LCD_EN for LilyGo (or will be ignored on Waveshare)
+  rtc_gpio_isolate(GPIO_NUM_13);  // LCD_VCI_EN for Waveshare (or will be ignored on LilyGo)
+  rtc_gpio_isolate(GPIO_NUM_8);   // TOUCH_RST
+
+  // Configure GPIO0 BEFORE disabling wake sources
   gpio_hold_en(GPIO_NUM_0);
-  // make sure BOOT button is the only wake up source
+
+  // Disable all wake sources, then enable only GPIO0
   esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
   esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, LOW);
+
+  // Close communication buses
   SPI.end();
+
 #if defined (XPOWERS_CHIP_AXP2101)
+  // 5. Configure PMU for deep sleep
   prepare_AXP2101_deep_sleep();
 #endif
+
+  // IMPORTANT: Do NOT use Serial.flush() as it blocks when USB CDC is not connected!
+  // Just print and give a short delay for the message to be sent
+  Serial.println("Entering deep sleep now...");
+  delay(100);  // Brief delay to allow serial TX buffer to empty
+
+  // Note: Serial is NOT closed - it will be automatically handled by deep sleep
+
   esp_deep_sleep_start();
 }
 

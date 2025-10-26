@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Read(//c/Users/v-b2/Documents/PlatformIO/Projects/SkyView-AMOLED-(WaveShare-LilyGo)-1.75-TFT_eSPI/SkyView-AMOLED-round-1.75-TFT_eSPI/src/**)",
-      "Read(//c/Users/v-b2/Documents/PlatformIO/Projects/SkyView-AMOLED-(WaveShare-LilyGo)-1.75-TFT_eSPI/SkyView-AMOLED-round-1.75-TFT_eSPI/**)"
+      "Read(//c/Users/v-b2/Documents/PlatformIO/Projects/SkyView-AMOLED-(WaveShare-LilyGo)-1.75-TFT_eSPI/SkyView-AMOLED-round-1.75-TFT_eSPI/**)",
+      "Bash(pio run:*)"
     ],
     "deny": [],
     "ask": []
