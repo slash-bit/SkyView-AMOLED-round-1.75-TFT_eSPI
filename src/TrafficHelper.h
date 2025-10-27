@@ -76,8 +76,8 @@ typedef struct traffic_by_dist_struct {
   time_t   timestamp;
 } traffic_by_dist_t;
 
-#define ALARM_ZONE_NONE         10000  // meters
-#define ALARM_ZONE_CLOSE        6000
+#define ALARM_ZONE_NONE         5000  // meters
+#define ALARM_ZONE_CLOSE        3000
 
 #define VERTICAL_SLOPE          5  /* slope effect for alerts */
 

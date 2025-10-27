@@ -564,14 +564,20 @@ void settings_page_2() {
     text_y = 200;
     sprite.setCursor(button_x - 300, text_y);
     sprite.printf("Voice Alerts");
-    // Placeholder - will be implemented later
-    settings_button(button_x, text_y, false);
+    if (settings->voice_alerts) {
+      settings_button(button_x, text_y, true);
+    } else {
+      settings_button(button_x, text_y, false);
+    }
 
     text_y = 260;
     sprite.setCursor(button_x - 300, text_y);
     sprite.printf("Demo Mode");
-    // Placeholder - will be implemented later
-    settings_button(button_x, text_y, false);
+    if (settings->demo_mode) {
+      settings_button(button_x, text_y, true);
+    } else {
+      settings_button(button_x, text_y, false);
+    }
 
     text_y = 340;
     sprite.setCursor(button_x - 240, 320);

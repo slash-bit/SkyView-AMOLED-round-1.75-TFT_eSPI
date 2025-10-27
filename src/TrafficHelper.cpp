@@ -232,8 +232,11 @@ static void Traffic_Voice_One(traffic_t *fop)
         snprintf(message, sizeof(message), "%s %s %s",
              (fop->alarm_level < ALARM_LEVEL_URGENT ? WARNING_WORD1 : WARNING_WORD3),
              where, (voc_alt > 70 ? "high" : voc_alt < -70 ? "low" : "level"));
-        settings->voice = VOICE_3;  // faster female voice
-        // SoC->TTS(message);
+        settings->voice = VOICE_2;  // Use voice2 instead of voice3
+        // Only play audio if voice alerts are enabled
+        if (settings->voice_alerts) {
+          SoC->TTS(message);
+        }
         return;
     }
 
@@ -248,6 +251,9 @@ static void Traffic_Voice_One(traffic_t *fop)
                   _GPS_MPH_PER_KNOT;
       voc_alt  = abs((int) (fop->RelativeVertical *
                   _GPS_FEET_PER_METER));
+      snprintf(elev, sizeof(elev), "%u hundred %s %s",
+        (voc_alt / 100), u_alt,
+        fop->RelativeVertical > 0 ? "above" : "below");
       break;
     case UNITS_MIXED:
       u_dist = "kms";
@@ -255,6 +261,13 @@ static void Traffic_Voice_One(traffic_t *fop)
       voc_dist = fop->distance / 1000.0;
       voc_alt  = abs((int) (fop->RelativeVertical *
                   _GPS_FEET_PER_METER));
+      if (voc_alt < 300) {
+        strcpy(elev, "level");
+      } else {
+        snprintf(elev, sizeof(elev), "%u hundred %s %s",
+          (voc_alt / 100), u_alt,
+          fop->RelativeVertical > 0 ? "above" : "below");
+      }
       break;
     case UNITS_METRIC:
     default:
@@ -262,6 +275,16 @@ static void Traffic_Voice_One(traffic_t *fop)
       u_alt  = "metres";
       voc_dist = fop->distance / 1000.0;
       voc_alt  = abs((int) fop->RelativeVertical);
+      if (voc_alt < 100) {
+        strcpy(elev, "level");
+      } else {
+        if (voc_alt > 500) {
+          voc_alt = 500;
+        }
+      snprintf(elev, sizeof(elev), "%u hundred %s %s",
+        (voc_alt / 100), u_alt,
+        fop->RelativeVertical > 0 ? "above" : "below");
+      }
       break;
     }
 
@@ -274,24 +297,18 @@ static void Traffic_Voice_One(traffic_t *fop)
       snprintf(how_far, sizeof(how_far), "%u %s", (int) voc_dist, u_dist);
     }
 
-    if (voc_alt < 100) {
-      strcpy(elev, "level");
-    } else {
-      if (voc_alt > 500) {
-        voc_alt = 500;
-      }
 
-      snprintf(elev, sizeof(elev), "%u hundred %s %s",
-        (voc_alt / 100), u_alt,
-        fop->RelativeVertical > 0 ? "above" : "below");
-    }
+    
 
     snprintf(message, sizeof(message),
                 "%s %s %s %s",           // was "traffic %s distance %s altitude %s"
                 ADVISORY_WORD, where, how_far, elev);
 
     settings->voice = VOICE_1;  // slower male voice
-    // SoC->TTS(message);
+    // Only play audio if voice alerts are enabled
+    if (settings->voice_alerts) {
+      SoC->TTS(message);
+    }
 }
 
 

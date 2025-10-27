@@ -9,7 +9,7 @@
 #include <Arduino.h>
 
 #define DEMO_FILE_PATH "/demo.nmea"
-#define DEFAULT_DEMO_LINE_DELAY_MS 160  // Default delay between lines (160ms)
+#define DEFAULT_DEMO_LINE_DELAY_MS 125  // Default delay between lines (125ms) 8 lines per second
 #define DEFAULT_DEMO_GPGGA_INTERVAL_MS 1000  // Target 1 second between $GPGGA lines
 
 void Demo_setup();

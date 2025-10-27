@@ -213,7 +213,9 @@ void tapHandler(int x, int y) {
       settings_page();
     } else if (settings_page_number == 2) {
       // Voice Alerts toggle
-      //TODO: Voice alerts
+      settings->voice_alerts = !settings->voice_alerts;
+      EEPROM_store();
+      Serial.printf("Voice alerts toggled: %s\n", settings->voice_alerts ? "ON" : "OFF");
       settings_page();
     }
   }
@@ -229,8 +231,19 @@ void tapHandler(int x, int y) {
       }
       settings_page();
     } else if (settings_page_number == 2) {
-      // Demo mode toggle
-      // TODO: Demo mode
+      // Demo mode toggle - switch between CON_DEMO_FILE and CON_BLUETOOTH_LE
+      settings->demo_mode = !settings->demo_mode;
+      if (settings->demo_mode) {
+        // Enable demo mode
+        settings->connection = CON_DEMO_FILE;
+        Serial.println("Demo mode enabled - Connection set to CON_DEMO_FILE");
+      } else {
+        // Disable demo mode - restore to BLE
+        settings->connection = CON_BLUETOOTH_LE;
+        Serial.println("Demo mode disabled - Connection set to CON_BLUETOOTH_LE");
+      }
+      EEPROM_store();
+      Serial.printf("Demo mode toggled: %s\n", settings->demo_mode ? "ON" : "OFF");
       settings_page();
     }
   }

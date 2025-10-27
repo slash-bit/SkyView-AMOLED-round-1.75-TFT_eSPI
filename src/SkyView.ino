@@ -138,6 +138,17 @@ void setup()
     Serial.println("Error: Null pointer detected!");
     return;
   }
+
+  // Synchronize demo_mode flag with connection setting on boot
+  if (settings->connection == CON_DEMO_FILE && !settings->demo_mode) {
+    settings->demo_mode = true;
+    EEPROM_store();
+    Serial.println("Boot: Synchronized demo_mode flag to true (connection is CON_DEMO_FILE)");
+  } else if (settings->connection != CON_DEMO_FILE && settings->demo_mode) {
+    settings->demo_mode = false;
+    EEPROM_store();
+    Serial.println("Boot: Synchronized demo_mode flag to false (connection is not CON_DEMO_FILE)");
+  }
   //temporary settings
  /* settings->adapter       = ADAPTER_TTGO_T5S;
   settings->connection      = CON_BLUETOOTH_LE;

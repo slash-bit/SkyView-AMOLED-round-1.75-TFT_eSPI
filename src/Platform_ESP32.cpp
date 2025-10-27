@@ -145,6 +145,12 @@ static union {
   uint8_t efuse_mac[6];
   uint64_t chipmacid;
 };
+
+#if defined(SD_CARD) && defined(LILYGO_AMOLED_1_75)
+// Dedicated SPI bus for SD card on LilyGo to prevent conflicts
+SPIClass SD_SPI(HSPI);
+#endif
+
 #if defined(AUDIO)
 static uint8_t sdcard_files_to_open = 0;
 File wavFile;
@@ -165,9 +171,9 @@ i2s_config_t i2s_config = {
     .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
     .communication_format = I2S_COMM_FORMAT_I2S,
     .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
-    .dma_buf_count = 8,
-    .dma_buf_len = 256,
-    .use_apll = false,
+    .dma_buf_count = 10,      // Increased from 8 to 10 for better buffering
+    .dma_buf_len = 512,       // Increased from 256 to 512 for smoother playback
+    .use_apll = true,         // Use audio PLL for better clock accuracy
     .tx_desc_auto_clear = true,
     .fixed_mclk = 0
 };
@@ -361,11 +367,32 @@ static void ESP32_setup()
   Serial.println(hw_info.revision);
   // Initialise SD card.
 #if defined(SD_CARD)
-SPI.begin(SD_SCLK, SD_MISO, SD_MOSI, SD_CS);
-if (!SD.begin(SD_CS, SPI, SPI_FREQUENCY)) {
-    Serial.println("Card Mount Failed!");
-    return;
-}
+  // Initialize dedicated SPI bus for SD card to prevent conflicts with other peripherals
+  // LilyGo AMOLED uses SD card on separate SPI pins (38-41)
+  Serial.println("Initializing SD card on dedicated SPI bus...");
+
+#if defined(LILYGO_AMOLED_1_75)
+  SD_SPI.begin(SD_SCLK, SD_MISO, SD_MOSI, SD_CS);
+#else
+  SPI.begin(SD_SCLK, SD_MISO, SD_MOSI, SD_CS);
+#endif
+
+  delay(100);  // Give SD card time to power up
+
+  // Try to begin SD with reduced frequency (4MHz) for better stability
+  const uint32_t SD_INIT_FREQ = 4000000;  // 4MHz for initialization
+
+#if defined(LILYGO_AMOLED_1_75)
+  if (!SD.begin(SD_CS, SD_SPI, SD_INIT_FREQ)) {
+#else
+  if (!SD.begin(SD_CS, SPI, SD_INIT_FREQ)) {
+#endif
+      Serial.println("Card Mount Failed!");
+      return;
+  }
+
+  delay(50);  // Allow SD card to stabilize after mount
+
   uint8_t cardType = SD.cardType();
   if (cardType == CARD_NONE) {
       Serial.println("No SD card attached!");
@@ -386,10 +413,19 @@ if (!SD.begin(SD_CS, SPI, SPI_FREQUENCY)) {
               Serial.println("Unknown");
               break;
       }
+      uint64_t cardSize = SD.cardSize() / (1024 * 1024);
+      Serial.printf("SD Card Size: %lluMB\n", cardSize);
   }
 
   Serial.println("SD card initialized.");
 #endif //SD_CARD
+
+#if defined(AUDIO)
+  // Initialize amplifier enable pin
+  pinMode(SOC_GPIO_AMP_ENABLE, OUTPUT);
+  digitalWrite(SOC_GPIO_AMP_ENABLE, LOW);  // Start with amplifier OFF
+  Serial.println("Audio amplifier pin initialized (GPIO 47)");
+#endif
 }
 
 static uint32_t ESP32_getChipId()
@@ -932,9 +968,12 @@ static bool play_file(char *filename, int volume)
 {
     headerState_t state = HEADER_RIFF;
 
+    // Try to open the file directly without checking cardType()
+    // cardType() can trigger unwanted remount attempts
+    // SPI bus should be initialized once per TTS call, not per file
     File wavfile = SD.open(filename);
     if (! wavfile) {
-      Serial.print(F("error opening WAV file: "));
+      Serial.print(F("Error opening WAV file: "));
       Serial.println(filename);
       return false;
     } else {
@@ -988,61 +1027,22 @@ static bool play_file(char *filename, int volume)
         //initialize i2s with configurations above
         i2s_driver_install((i2s_port_t)i2s_num, &i2s_config, 0, NULL);
         i2s_set_pin((i2s_port_t)i2s_num, &pin_config);
+        i2s_zero_dma_buffer((i2s_port_t)i2s_num);  // Clear DMA buffer to prevent noise
         //set sample rates of i2s to sample rate of wav file
         i2s_set_sample_rates((i2s_port_t)i2s_num, wavProps.sampleRate);
         break;
         /* after processing wav file, it is time to process music data */
         case DATA:
-        uint32_t data;
-        n = read4bytes(wavfile, &data);
-        if (n == 4) {
-            if (volume > 0) {            // double the values, 6 dB louder
-              if (wavProps.bitsPerSample == I2S_BITS_PER_SAMPLE_16BIT) {
-                int16_t *p16 = (int16_t *) &data;
-                int16_t i16 = *p16;
-                if (i16 & 0xC000 == 0x4000)        // large positive
-                    i16 = 0x7FFF;    // damn the clipping, full speed ahead
-                else if (i16 & 0xC000 == 0x8000)   // large negative
-                    i16 = 0x8000;
-                else  // 0xC000 -- 0x3FFF
-                    i16 <<= 1;
-                *p16 = i16;
-                ++p16;
-                i16 = *p16;
-                if (i16 & 0xC000 == 0x4000)
-                    i16 = 0x7FFF;
-                else if (i16 & 0xC000 == 0x8000)
-                    i16 = 0x8000;
-                else
-                    i16 <<= 1;
-                *p16 = i16;
-                ++p16;
-              } else if (wavProps.bitsPerSample == I2S_BITS_PER_SAMPLE_8BIT) {
-                uint8_t *p8 = (uint8_t *) &data;
-                for (int i=0; i<4; i++) {
-                    if (p8[i] > 128 + 63)
-                        p8[i] = 255;
-                    else if (p8[i] < 128 - 64)
-                        p8[i] = 0;
-                    else
-                        p8[i] = (p8[i] << 1) - 64;
-                }
-              }
-            } else if (volume < 0) {     // halve the values, 6 dB quieter
-              if (wavProps.bitsPerSample == I2S_BITS_PER_SAMPLE_16BIT) {
-                int16_t *p16 = (int16_t *) &data;
-                *p16 >>= 1;
-                ++p16;
-                *p16 >>= 1;
-              } else if (wavProps.bitsPerSample == I2S_BITS_PER_SAMPLE_8BIT) {
-                uint8_t *p8 = (uint8_t *) &data;
-                *p8++ = (*p8 >> 1) + 64;
-                *p8++ = (*p8 >> 1) + 64;
-                *p8++ = (*p8 >> 1) + 64;
-                *p8++ = (*p8 >> 1) + 64;
-              }
+        // Use buffered reading for smooth playback (like working demo)
+        uint8_t audioBuffer[1024];
+        size_t bytesRead, bytesWritten;
+
+        while (wavfile.available()) {
+            bytesRead = wavfile.read(audioBuffer, sizeof(audioBuffer));
+            if (bytesRead > 0) {
+                // Write buffered data directly to I2S - no volume adjustment needed
+                i2s_write((i2s_port_t)i2s_num, audioBuffer, bytesRead, &bytesWritten, portMAX_DELAY);
             }
-            i2s_write_sample_nb(data);
         }
         break;
       }
@@ -1060,15 +1060,31 @@ static void ESP32_TTS(char *message)
 {
     char filename[MAX_FILENAME_LEN];
 
-    if (settings->voice == VOICE_OFF || settings->adapter != ADAPTER_TTGO_T5S)
+    if (settings->voice == VOICE_OFF)
       return;
 
-    if (strcmp(message, "POST")) {   // *not* the post-booting demo
+#if !defined(SD_CARD)
+    // Audio requires SD card support
+    Serial.println(F("Audio requires SD_CARD to be defined"));
+    return;
+#endif
 
-      if (SD.cardType() == CARD_NONE) {
-        //Serial.print(F("no SD card"));
-        return;
-      }
+#if defined(SD_CARD) && defined(LILYGO_AMOLED_1_75)
+    // Reinitialize SD SPI bus before first access
+    // This ensures SPI pins are correctly configured after WiFi/display init
+    Serial.println("Reinitializing SD SPI bus for audio playback...");
+    SD_SPI.begin(SD_SCLK, SD_MISO, SD_MOSI, SD_CS);
+    delay(50);
+#endif
+
+    // Enable audio amplifier
+    Serial.println("Enabling audio amplifier...");
+    digitalWrite(SOC_GPIO_AMP_ENABLE, HIGH);
+    delay(200);  // Give amplifier time to power up
+
+    if (strcmp(message, "POST")) {   // *not* the post-booting demo
+      // Don't call SD.cardType() here - it can trigger unwanted remount attempts
+      // Instead, just try to access files and handle errors in play_file()
 #if defined(USE_EPAPER)
       while (!SoC->EPD_is_ready()) {yield();}
       EPD_Message("VOICE", "ALERT");
@@ -1108,28 +1124,15 @@ static void ESP32_TTS(char *message)
         enableLoopWDT();
       }
 
+      // Disable amplifier after playback
+      digitalWrite(SOC_GPIO_AMP_ENABLE, LOW);
+      Serial.println("Audio amplifier disabled.");
+
    } else {   /* post-booting */
-
-      if (SD.cardType() == CARD_NONE) {
-        /* no SD card, can't play WAV files */
-        Serial.print(F("POST: no SD card"));
-        //if (hw_info.display == DISPLAY_EPD_2_7)
-        {
-          /* keep boot-time SkyView logo on the screen for a while */
-          delay(6000);
-        }
-        return;
-      }
-
-      //settings->voice = VOICE_2;
-      // strcpy(filename, WAV_FILE_PREFIX);
-      // strcat(filename, "POST");
-      // strcat(filename, WAV_FILE_SUFFIX);
-      // play_file(filename, 0);
+      // Don't call SD.cardType() - let play_file() handle file access errors
+      // SD card should be ready from initialization in ESP32_setup()
 
       //Start-up tones
-      
-
       /* demonstrate the voice output */
       delay(1500);
       settings->voice = VOICE_1;
@@ -1137,15 +1140,23 @@ static void ESP32_TTS(char *message)
       strcat(filename, VOICE1_SUBDIR);
       strcat(filename, "notice");
       strcat(filename, WAV_FILE_SUFFIX);
-      play_file(filename, 0);
+      if (!play_file(filename, 0)) {
+        Serial.println(F("POST: Failed to play voice1 notice.wav - check SD card and files"));
+      }
       delay(1500);
-      settings->voice = VOICE_3;
+      settings->voice = VOICE_2;
       strcpy(filename, WAV_FILE_PREFIX);
-      strcat(filename, VOICE3_SUBDIR);
+      strcat(filename, VOICE2_SUBDIR);
       strcat(filename, "notice");
       strcat(filename, WAV_FILE_SUFFIX);
-      play_file(filename, 1);   // make voice3 6dB louder
+      if (!play_file(filename, 0)) {   // No volume adjustment needed
+        Serial.println(F("POST: Failed to play voice2 notice.wav - check SD card and files"));
+      }
       delay(1000);
+
+      // Disable amplifier after POST audio
+      digitalWrite(SOC_GPIO_AMP_ENABLE, LOW);
+      Serial.println("POST audio complete. Amplifier disabled.");
     }
 }
 #endif /* AUDIO */
@@ -1263,6 +1274,10 @@ static void ESP32_Button_setup()
 
 // Button task - runs continuously to check button state
 void buttonTask(void *parameter) {
+  // Wait 2 seconds after boot before monitoring buttons
+  // This prevents false triggers during system initialization
+  vTaskDelay(pdMS_TO_TICKS(2000));
+
   while(true) {
     button_mode.check();
     vTaskDelay(pdMS_TO_TICKS(5)); // Check every 5ms for very responsive detection

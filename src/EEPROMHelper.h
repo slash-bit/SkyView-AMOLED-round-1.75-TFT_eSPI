@@ -52,7 +52,9 @@ typedef struct Settings {
     bool     compass:1;
     uint8_t  filter:4;
     bool     show_thermals:1;
-    uint8_t  resvd0:3;
+    bool     voice_alerts:1;
+    bool     demo_mode:1;
+    uint8_t  resvd0:1;
     bool     show_labels:1;
 
     uint32_t team;

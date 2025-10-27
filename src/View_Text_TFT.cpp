@@ -197,8 +197,8 @@ void TFT_draw_text() {
     } else {
       traffic_vario = traffic[TFT_current - 1].climbrate;
     }
-    Serial.printf("Average climb rate: %.2f\n", traffic_avg_vario);
-    Serial.printf("Current climb rate: %.2f\n", traffic_vario);
+    // Serial.printf("Average climb rate: %.2f\n", traffic_avg_vario);
+    // Serial.printf("Current climb rate: %.2f\n", traffic_vario);
     // float speed = (traffic[TFT_current - 1].fop->GroundSpeed);
 
 

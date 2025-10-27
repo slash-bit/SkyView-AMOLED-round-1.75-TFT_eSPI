@@ -92,8 +92,9 @@ const uint8_t BUTTON_MODE_PIN = 0;
 #if defined(AUDIO)
 /* LILYGO I2S-out pins mapping */
 #define SOC_GPIO_PIN_BCLK     2
-#define SOC_GPIO_PIN_LRCLK    3
-#define SOC_GPIO_PIN_DOUT     1
+#define SOC_GPIO_PIN_LRCLK    1
+#define SOC_GPIO_PIN_DOUT     3
+#define SOC_GPIO_AMP_ENABLE   47  // Amplifier enable pin - MUST be HIGH to hear audio
 #endif //audio
 
 // #define BUTTON_MODE_PIN      0
