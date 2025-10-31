@@ -231,20 +231,29 @@ void tapHandler(int x, int y) {
       }
       settings_page();
     } else if (settings_page_number == 2) {
-      // Demo mode toggle - switch between CON_DEMO_FILE and CON_BLUETOOTH_LE
+      // Demo mode toggle - just toggle the flag and reboot
+      // The boot synchronization code will set the correct connection mode
       settings->demo_mode = !settings->demo_mode;
-      if (settings->demo_mode) {
-        // Enable demo mode
-        settings->connection = CON_DEMO_FILE;
-        Serial.println("Demo mode enabled - Connection set to CON_DEMO_FILE");
-      } else {
-        // Disable demo mode - restore to BLE
-        settings->connection = CON_BLUETOOTH_LE;
-        Serial.println("Demo mode disabled - Connection set to CON_BLUETOOTH_LE");
-      }
+
+      // Save to EEPROM first
       EEPROM_store();
       Serial.printf("Demo mode toggled: %s\n", settings->demo_mode ? "ON" : "OFF");
+
+      // Redraw settings page to show the new toggle state
       settings_page();
+      delay(500);  // Let user see the toggle change
+
+      // Display reboot message
+      if (settings->demo_mode) {
+        Serial.println("Demo mode will be enabled on next boot");
+        TFT_radar_Draw_Message("Demo Mode Enabled", "Rebooting...");
+      } else {
+        Serial.println("Demo mode will be disabled on next boot");
+        TFT_radar_Draw_Message("Demo Mode Disabled", "Rebooting...");
+      }
+
+      delay(2000);  // Show message for 2 seconds
+      ESP.restart();  // Reboot - settings will be applied during boot
     }
   }
   else if (x > 320 && x < 420 && y > 290 && y < 420
