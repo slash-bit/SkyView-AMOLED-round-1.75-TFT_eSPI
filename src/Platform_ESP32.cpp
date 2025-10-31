@@ -226,9 +226,14 @@ void ESP32_fini()
   // Shutdown peripherals to minimize power consumption
 
   // Isolate GPIO pads to prevent leakage current in deep sleep
-  rtc_gpio_isolate(GPIO_NUM_16);  // LCD_EN for LilyGo (or will be ignored on Waveshare)
-  rtc_gpio_isolate(GPIO_NUM_13);  // LCD_VCI_EN for Waveshare (or will be ignored on LilyGo)
-  rtc_gpio_isolate(GPIO_NUM_8);   // TOUCH_RST
+  // This prevents the green screen by properly powering down the display
+#if defined(LILYGO_AMOLED_1_75)
+  rtc_gpio_isolate(GPIO_NUM_16);  // LCD_EN for LilyGo
+  rtc_gpio_isolate(GPIO_NUM_8);   // TOUCH_RST for LilyGo
+#elif defined(WAVESHARE_AMOLED_1_75)
+  rtc_gpio_isolate(GPIO_NUM_13);  // LCD_VCI_EN for Waveshare
+  rtc_gpio_isolate(GPIO_NUM_40);  // TOUCH_RST for Waveshare
+#endif
 
   // Configure GPIO0 BEFORE disabling wake sources
   gpio_hold_en(GPIO_NUM_0);

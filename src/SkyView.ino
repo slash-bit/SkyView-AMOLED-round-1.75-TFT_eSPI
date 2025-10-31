@@ -139,34 +139,24 @@ void setup()
     return;
   }
 
-  // Synchronize demo_mode flag with connection setting on boot
-  if (settings->connection == CON_DEMO_FILE && !settings->demo_mode) {
-    settings->demo_mode = true;
-    EEPROM_store();
-    Serial.println("Boot: Synchronized demo_mode flag to true (connection is CON_DEMO_FILE)");
-  } else if (settings->connection != CON_DEMO_FILE && settings->demo_mode) {
-    settings->demo_mode = false;
-    EEPROM_store();
-    Serial.println("Boot: Synchronized demo_mode flag to false (connection is not CON_DEMO_FILE)");
+  // Apply demo_mode setting: set connection mode based on demo_mode flag
+  if (settings->demo_mode) {
+    // Demo mode is ON - set connection to CON_DEMO_FILE
+    if (settings->connection != CON_DEMO_FILE) {
+      settings->connection = CON_DEMO_FILE;
+      EEPROM_store();
+      Serial.println("Boot: Demo mode ON - connection set to CON_DEMO_FILE");
+    }
+  } else {
+    // Demo mode is OFF - restore to BLE if currently in demo mode
+    if (settings->connection == CON_DEMO_FILE) {
+      settings->connection = CON_BLUETOOTH_LE;
+      EEPROM_store();
+      Serial.println("Boot: Demo mode OFF - connection set to CON_BLUETOOTH_LE");
+    }
   }
-  //temporary settings
- /* settings->adapter       = ADAPTER_TTGO_T5S;
-  settings->connection      = CON_BLUETOOTH_LE;
-  settings->bridge          = BRIDGE_NONE;
-  settings->baudrate        = B38400;
-  settings->protocol        = PROTOCOL_NMEA;
-  settings->orientation     = DIRECTION_NORTH_UP;
-  settings->units           = UNITS_METRIC;
-  settings->vmode           = VIEW_MODE_RADAR;
-  settings->zoom            = ZOOM_MEDIUM;
-  settings->adb             = DB_NONE;
-  settings->idpref          = ID_REG;
-  settings->voice           = VOICE_OFF;
-  settings->compass          = ANTI_GHOSTING_OFF;
-  settings->filter          = TRAFFIC_FILTER_500M;
-  settings->power_save      = POWER_SAVE_WIFI;
-  settings->team            = 0x46BCDC;
-*/
+  WiFi.mode(WIFI_OFF); //temporarily disable WiFi to prevent issues during Bluetooth init
+  btStop();  // Disable classic Bluetooth (we only use BLE)
   Battery_setup();
 #if defined(BUTTONS)
   SoC->Button_setup();

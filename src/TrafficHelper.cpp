@@ -235,7 +235,9 @@ static void Traffic_Voice_One(traffic_t *fop)
         settings->voice = VOICE_2;  // Use voice2 instead of voice3
         // Only play audio if voice alerts are enabled
         if (settings->voice_alerts) {
+#if defined(AUDIO)
           SoC->TTS(message);
+#endif
         }
         return;
     }
@@ -307,7 +309,9 @@ static void Traffic_Voice_One(traffic_t *fop)
     settings->voice = VOICE_1;  // slower male voice
     // Only play audio if voice alerts are enabled
     if (settings->voice_alerts) {
+#if defined(AUDIO)
       SoC->TTS(message);
+#endif
     }
 }
 

@@ -242,6 +242,7 @@ static bool ESP32_BLEConnectToServer() {
       pRemoteCharacteristic->subscribe(true, AppNotifyCallback);
 
     ESP32_BT_ctl.status = BT_STATUS_CON;
+    pClient->updateConnParams(20, 20, 1, 500);
     return true;
 }
 
@@ -260,8 +261,18 @@ static void ESP32_Bluetooth_setup(){
 #if defined(USE_NIMBLE)
       Serial.println("[BLE] Initializing NimBLE...");
       NimBLEDevice::init("");
+
+      // Create client first before setting any parameters
       pClient = NimBLEDevice::createClient();
       pClient->setClientCallbacks(new AppClientCallback());
+      
+      // *** POWER OPTIMIZATION: Reduce BLE TX power ***
+      // This reduces power consumption significantly during BLE operation
+      // Available power levels: N12, N9, N6, N3, N0, P3, P6, P9
+      // ESP_PWR_LVL_N12 = -12dBm (lowest power, ~10mA, range ~10m)
+      // ESP_PWR_LVL_N0  = 0dBm (medium power, ~15mA, range ~30m)
+      // ESP_PWR_LVL_P9  = +9dBm (default/high power, ~70mA, range ~100m)
+      NimBLEDevice::setPower(ESP_PWR_LVL_N0);  // Set to -12dBm for maximum power saving
 
       NimBLEScan* pBLEScan = NimBLEDevice::getScan();
 #else
