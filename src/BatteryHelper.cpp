@@ -427,10 +427,14 @@ void battery_fini() {
   end_time_ms = millis();
 
   unsigned long durationSeconds = (end_time_ms - start_time_ms) / 1000;
+  float estimated_mAh = 0;
 
-  float voltage_drop = voltage_start - voltage_end;
-  // Simplified estimate: assume linear discharge, estimate mAh used
-  float estimated_mAh = (voltage_drop / 0.001) * 0.0015f; // tuning factor as needed
+  // Simplified estimate
+  if (voltage_start > voltage_end) {
+     estimated_mAh = 100.0f * (durationSeconds / 3600.0f); // based on 100mA average draw
+  } else {
+     estimated_mAh = 200.0f * (durationSeconds / 3600.0f); // based on 200mA average charge
+  }
   writeBatteryLog(voltage_start, voltage_end, durationSeconds, estimated_mAh);
 
 }
@@ -451,6 +455,8 @@ void Battery_loop()
       if (voltage > 2.0 && voltage < Battery_cutoff()) {
         if (Battery_cutoff_count > 3) {
           ESP32_TFT_fini("LOW BATTERY");
+          battery_fini();
+          delay(100);
           power_off(); // cut off the battery "BATFET"
         } else {
           Battery_cutoff_count++;
