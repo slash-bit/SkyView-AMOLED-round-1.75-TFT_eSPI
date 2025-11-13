@@ -58,6 +58,9 @@
 #define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
 #define TIME_TO_SLEEP  28        /* Time ESP32 will go to sleep (in seconds) */
 
+// Forward declarations
+static void ESP32_Button_setup();
+
 WebServer server ( 80 );
 
 std::shared_ptr<Arduino_IIC_DriveBus> IIC_Bus = std::make_shared<Arduino_HWIIC>(IIC_SDA, IIC_SCL, &Wire);
@@ -370,6 +373,14 @@ static void ESP32_setup()
     // }
   }
   Serial.println(hw_info.revision);
+
+  // Initialize button BEFORE SD card to ensure GPIO 0 pull-up is active during SD init
+#if defined(BUTTONS)
+  Serial.println("Initializing button before SD card...");
+  ESP32_Button_setup();
+  delay(100);  // Allow button pull-ups to stabilize
+#endif
+
   // Initialise SD card.
 #if defined(SD_CARD)
   // Initialize dedicated SPI bus for SD card to prevent conflicts with other peripherals
@@ -1249,9 +1260,23 @@ void handleEvent(AceButton* button, uint8_t eventType,
 
 static void ESP32_Button_setup()
 {
+  // Prevent double initialization - can be called multiple times safely
+  static bool button_initialized = false;
+  if (button_initialized) {
+    Serial.println("Button already initialized, skipping duplicate setup");
+    return;
+  }
+
   int mode_button_pin = BUTTON_MODE_PIN;
   // Button(s) uses internal pull up resistor.
   pinMode(mode_button_pin, INPUT_PULLUP);
+
+  // Configure GPIO 0 with strong pull-up BEFORE any SD card or audio operations
+  pinMode(GPIO_NUM_0, INPUT_PULLUP);
+  gpio_pullup_en(GPIO_NUM_0);
+  gpio_pulldown_dis(GPIO_NUM_0);
+
+  Serial.println("GPIO 0 configured with strong pull-up before button init");
 
   button_mode.init(mode_button_pin, HIGH, 0);  // Active LOW button (pressed = LOW)
 
@@ -1268,19 +1293,29 @@ static void ESP32_Button_setup()
   ModeButtonConfig->setFeature(ButtonConfig::kFeatureSuppressAfterLongPress);
 
   // Set timing parameters
+  // Increased debounce delay when SD_CARD and AUDIO enabled to filter noise
+#if defined(SD_CARD) && defined(AUDIO)
+  ModeButtonConfig->setDebounceDelay(50);  // Increased from 15ms to filter SPI noise
+#else
   ModeButtonConfig->setDebounceDelay(15);
+#endif
   ModeButtonConfig->setClickDelay(300);
   ModeButtonConfig->setDoubleClickDelay(400);
   ModeButtonConfig->setLongPressDelay(2000);
 
   // Create dedicated button task pinned to core 1 (same as touch task)
   xTaskCreatePinnedToCore(buttonTask, "Button Task", 4096, NULL, 1, &buttonTaskHandle, 1);
+
+  // Mark as initialized to prevent duplicate setup
+  button_initialized = true;
+  Serial.println("Button initialization complete");
 }
 
 // Button task - runs continuously to check button state
 void buttonTask(void *parameter) {
   // Wait 2 seconds after boot before monitoring buttons
   // This prevents false triggers during system initialization
+  // Button state is now cleared during setup, so shorter delay is safe
   vTaskDelay(pdMS_TO_TICKS(2000));
 
   while(true) {
