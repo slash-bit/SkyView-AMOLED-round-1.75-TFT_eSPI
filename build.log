@@ -1,0 +1,255 @@
+Processing LILYGO_AMOLED_1_75 (platform: espressif32 @ 6.5.0; board: esp32s3_flash_16MB; framework: arduino)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/espressif32/esp32s3_flash_16MB.html
+PLATFORM: Espressif 32 (6.5.0) > ESP32-S3-FLASH-16MB
+HARDWARE: ESP32S3 80MHz, 320KB RAM, 16MB Flash
+DEBUG: Current (esp-builtin) On-board (esp-builtin) External (cmsis-dap, esp-bridge, esp-prog, iot-bus-jtag, jlink, minimodule, olimex-arm-usb-ocd, olimex-arm-usb-ocd-h, olimex-arm-usb-tiny-h, olimex-jtag-tiny, tumpa)
+PACKAGES: 
+ - framework-arduinoespressif32 @ 3.20014.231204 (2.0.14) 
+ - tool-esptoolpy @ 1.40501.0 (4.5.1) 
+ - toolchain-riscv32-esp @ 8.4.0+2021r2-patch5 
+ - toolchain-xtensa-esp32s3 @ 8.4.0+2021r2-patch5
+Converting SkyView.ino
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 47 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- AceButton @ 1.10.1
+|-- TinyGPSPlus @ 1.1.0
+|-- ArduinoJson @ 6.21.5
+|-- NimBLE-Arduino @ 1.4.3
+|-- SPIFFS @ 2.0.0
+|-- Time @ 1.6.1
+|-- Driver Bus Library Based on Arduino @ 1.0.1
+|-- FS @ 2.0.0
+|-- TFT_eSPI @ 2.5.43
+|-- rotobox
+|-- ADC
+|-- flashrom
+|-- SD @ 2.0.0
+|-- SPI @ 2.0.0
+|-- Wire @ 2.0.0
+|-- SensorLib @ 0.2.0
+|-- jQuery
+|-- DNSServer @ 2.0.0
+|-- WiFi @ 2.0.0
+|-- Update @ 2.0.0
+|-- WebServer @ 2.0.0
+|-- EEPROM @ 2.0.0
+Building in release mode
+Compiling .pio\build\LILYGO_AMOLED_1_75\src\ApproxMath.cpp.o
+Compiling .pio\build\LILYGO_AMOLED_1_75\src\BatteryHelper.cpp.o
+Compiling .pio\build\LILYGO_AMOLED_1_75\src\BluetoothHelper.cpp.o
+Compiling .pio\build\LILYGO_AMOLED_1_75\src\BuddyHelper.cpp.o
+Compiling .pio\build\LILYGO_AMOLED_1_75\src\DemoHelper.cpp.o
+Compiling .pio\build\LILYGO_AMOLED_1_75\src\EEPROMHelper.cpp.o
+Compiling .pio\build\LILYGO_AMOLED_1_75\src\EPDHelper.cpp.o
+Compiling .pio\build\LILYGO_AMOLED_1_75\src\GDL90Helper.cpp.o
+Compiling .pio\build\LILYGO_AMOLED_1_75\src\JSONHelper.cpp.o
+Compiling .pio\build\LILYGO_AMOLED_1_75\src\NMEAHelper.cpp.o
+In file included from src/BuddyHelper.cpp:2:
+lib/TFT_eSPI/TFT_eSPI.h:975:8: warning: #warning >>>>------>> TOUCH_CS pin not defined, TFT_eSPI touch functions will not be available! [-Wcpp]
+       #warning >>>>------>> TOUCH_CS pin not defined, TFT_eSPI touch functions will not be available!
+        ^~~~~~~
+In file included from src/TFTHelper.h:21,
+                 from src/BatteryHelper.cpp:26:
+lib/TFT_eSPI/TFT_eSPI.h:975:8: warning: #warning >>>>------>> TOUCH_CS pin not defined, TFT_eSPI touch functions will not be available! [-Wcpp]
+       #warning >>>>------>> TOUCH_CS pin not defined, TFT_eSPI touch functions will not be available!
+        ^~~~~~~
+Compiling .pio\build\LILYGO_AMOLED_1_75\src\OLEDHelper.cpp.o
+In file included from src/DemoHelper.cpp:7:
+src/EEPROMHelper.h:30:16: note: offset of packed bit-field 'Settings::filter' has changed in GCC 4.4
+ typedef struct Settings {
+                ^~~~~~~~
+Compiling .pio\build\LILYGO_AMOLED_1_75\src\Platform_ESP32.cpp.o
+In file included from src/EEPROMHelper.cpp:20:
+src/EEPROMHelper.h:30:16: note: offset of packed bit-field 'Settings::filter' has changed in GCC 4.4
+ typedef struct Settings {
+                ^~~~~~~~
+In file included from src/BluetoothHelper.cpp:23:
+src/EEPROMHelper.h:30:16: note: offset of packed bit-field 'Settings::filter' has changed in GCC 4.4
+ typedef struct Settings {
+                ^~~~~~~~
+In file included from src/GDL90Helper.cpp:24:
+src/EEPROMHelper.h:30:16: note: offset of packed bit-field 'Settings::filter' has changed in GCC 4.4
+ typedef struct Settings {
+                ^~~~~~~~
+Compiling .pio\build\LILYGO_AMOLED_1_75\src\Platform_ESP8266.cpp.o
+In file included from src/WebHelper.h:29,
+                 from src/BatteryHelper.cpp:27:
+src/EEPROMHelper.h:30:16: note: offset of packed bit-field 'Settings::filter' has changed in GCC 4.4
+ typedef struct Settings {
+                ^~~~~~~~
+src/BatteryHelper.cpp: In function 'void PMU_setup()':
+src/BatteryHelper.cpp:65:8: warning: unused variable 'ok' [-Wunused-variable]
+   bool ok = SY6970->IIC_Write_Device_State(
+        ^~
+Compiling .pio\build\LILYGO_AMOLED_1_75\src\Platform_RPi.cpp.o
+Compiling .pio\build\LILYGO_AMOLED_1_75\src\SkyView.ino.cpp.o
+Compiling .pio\build\LILYGO_AMOLED_1_75\src\SoCHelper.cpp.o
+Compiling .pio\build\LILYGO_AMOLED_1_75\src\TFTHelper.cpp.o
+Compiling .pio\build\LILYGO_AMOLED_1_75\src\TouchHelper.cpp.o
+Compiling .pio\build\LILYGO_AMOLED_1_75\src\TrafficHelper.cpp.o
+Compiling .pio\build\LILYGO_AMOLED_1_75\src\View_Compass_TFT.cpp.o
+In file included from src/NMEAHelper.cpp:25:
+src/EEPROMHelper.h:30:16: note: offset of packed bit-field 'Settings::filter' has changed in GCC 4.4
+ typedef struct Settings {
+                ^~~~~~~~
+Compiling .pio\build\LILYGO_AMOLED_1_75\src\View_Radar_TFT.cpp.o
+In file included from src/TFTHelper.h:21,
+                 from src/Platform_ESP32.cpp:31:
+lib/TFT_eSPI/TFT_eSPI.h:975:8: warning: #warning >>>>------>> TOUCH_CS pin not defined, TFT_eSPI touch functions will not be available! [-Wcpp]
+       #warning >>>>------>> TOUCH_CS pin not defined, TFT_eSPI touch functions will not be available!
+        ^~~~~~~
+In file included from src/TFTHelper.cpp:2:
+lib/TFT_eSPI/TFT_eSPI.h:975:8: warning: #warning >>>>------>> TOUCH_CS pin not defined, TFT_eSPI touch functions will not be available! [-Wcpp]
+       #warning >>>>------>> TOUCH_CS pin not defined, TFT_eSPI touch functions will not be available!
+        ^~~~~~~
+In file included from src/TFTHelper.h:21,
+                 from C:/Users/v-b2/Documents/PlatformIO/Projects/SkyView-AMOLED/src/SkyView.ino:52:
+lib/TFT_eSPI/TFT_eSPI.h:975:8: warning: #warning >>>>------>> TOUCH_CS pin not defined, TFT_eSPI touch functions will not be available! [-Wcpp]
+       #warning >>>>------>> TOUCH_CS pin not defined, TFT_eSPI touch functions will not be available!
+        ^~~~~~~
+In file included from src/TFTHelper.h:21,
+                 from src/TouchHelper.cpp:6:
+lib/TFT_eSPI/TFT_eSPI.h:975:8: warning: #warning >>>>------>> TOUCH_CS pin not defined, TFT_eSPI touch functions will not be available! [-Wcpp]
+       #warning >>>>------>> TOUCH_CS pin not defined, TFT_eSPI touch functions will not be available!
+        ^~~~~~~
+In file included from src/Platform_ESP32.cpp:32:
+src/EEPROMHelper.h:30:16: note: offset of packed bit-field 'Settings::filter' has changed in GCC 4.4
+ typedef struct Settings {
+                ^~~~~~~~
+src/Platform_ESP32.cpp: In function 'void ESP32_setup()':
+src/Platform_ESP32.cpp:313:12: warning: unused variable 'flash_id' [-Wunused-variable]
+   uint32_t flash_id = ESP32_getFlashId();
+            ^~~~~~~~
+In file included from C:/Users/v-b2/Documents/PlatformIO/Projects/SkyView-AMOLED/src/SkyView.ino:44:
+src/EEPROMHelper.h:30:16: note: offset of packed bit-field 'Settings::filter' has changed in GCC 4.4
+ typedef struct Settings {
+                ^~~~~~~~
+In file included from src/TFTHelper.h:21,
+                 from src/View_Compass_TFT.cpp:2:
+lib/TFT_eSPI/TFT_eSPI.h:975:8: warning: #warning >>>>------>> TOUCH_CS pin not defined, TFT_eSPI touch functions will not be available! [-Wcpp]
+       #warning >>>>------>> TOUCH_CS pin not defined, TFT_eSPI touch functions will not be available!
+        ^~~~~~~
+In file included from src/TouchHelper.cpp:3:
+src/driver/touch/TouchDrvCSTXXX.hpp: In member function 'void TouchDrvCSTXXX::setCenterButtonCoordinate(uint16_t, uint16_t)':
+src/driver/touch/TouchDrvCSTXXX.hpp:267:21: warning: unused variable 'model' [-Wunused-variable]
+         const char *model = drv->getModelName();
+                     ^~~~~
+src/driver/touch/TouchDrvCSTXXX.hpp: In member function 'void TouchDrvCSTXXX::setHomeButtonCallback(home_button_callback_t, void*)':
+src/driver/touch/TouchDrvCSTXXX.hpp:277:21: warning: unused variable 'model' [-Wunused-variable]
+         const char *model = drv->getModelName();
+                     ^~~~~
+Compiling .pio\build\LILYGO_AMOLED_1_75\src\View_Text_TFT.cpp.o
+src/driver/touch/TouchDrvCSTXXX.hpp: In member function 'void TouchDrvCSTXXX::disableAutoSleep()':
+src/driver/touch/TouchDrvCSTXXX.hpp:292:21: warning: unused variable 'model' [-Wunused-variable]
+         const char *model = drv->getModelName();
+                     ^~~~~
+src/driver/touch/TouchDrvCSTXXX.hpp: In member function 'void TouchDrvCSTXXX::enableAutoSleep()':
+src/driver/touch/TouchDrvCSTXXX.hpp:302:21: warning: unused variable 'model' [-Wunused-variable]
+         const char *model = drv->getModelName();
+                     ^~~~~
+In file included from src/TrafficHelper.cpp:24:
+src/EEPROMHelper.h:30:16: note: offset of packed bit-field 'Settings::filter' has changed in GCC 4.4
+ typedef struct Settings {
+                ^~~~~~~~
+src/TrafficHelper.cpp: In function 'void Traffic_Voice_One(traffic_t*)':
+src/TrafficHelper.cpp:238:16: error: 'const SoC_ops_t' {aka 'const struct SoC_ops_struct'} has no member named 'TTS'
+           SoC->TTS(message);
+                ^~~
+src/TrafficHelper.cpp:310:12: error: 'const SoC_ops_t' {aka 'const struct SoC_ops_struct'} has no member named 'TTS'
+       SoC->TTS(message);
+            ^~~
+src/TrafficHelper.cpp: In function 'void Traffic_Voice()':
+src/TrafficHelper.cpp:319:7: warning: unused variable 'bearing' [-Wunused-variable]
+   int bearing;
+       ^~~~~~~
+src/TrafficHelper.cpp:320:8: warning: unused variable 'message' [-Wunused-variable]
+   char message[80];
+        ^~~~~~~
+*** [.pio\build\LILYGO_AMOLED_1_75\src\TrafficHelper.cpp.o] Error 1
+In file included from src/TFTHelper.h:21,
+                 from src/View_Radar_TFT.cpp:21:
+lib/TFT_eSPI/TFT_eSPI.h:975:8: warning: #warning >>>>------>> TOUCH_CS pin not defined, TFT_eSPI touch functions will not be available! [-Wcpp]
+       #warning >>>>------>> TOUCH_CS pin not defined, TFT_eSPI touch functions will not be available!
+        ^~~~~~~
+In file included from src/TFTHelper.cpp:5:
+src/EEPROMHelper.h:30:16: note: offset of packed bit-field 'Settings::filter' has changed in GCC 4.4
+ typedef struct Settings {
+                ^~~~~~~~
+In file included from src/TouchHelper.cpp:12:
+src/EEPROMHelper.h: At global scope:
+src/EEPROMHelper.h:30:16: note: offset of packed bit-field 'Settings::filter' has changed in GCC 4.4
+ typedef struct Settings {
+                ^~~~~~~~
+In file included from src/View_Compass_TFT.cpp:5:
+src/EEPROMHelper.h:30:16: note: offset of packed bit-field 'Settings::filter' has changed in GCC 4.4
+ typedef struct Settings {
+                ^~~~~~~~
+In file included from src/View_Radar_TFT.cpp:32:
+src/EEPROMHelper.h:30:16: note: offset of packed bit-field 'Settings::filter' has changed in GCC 4.4
+ typedef struct Settings {
+                ^~~~~~~~
+src/View_Radar_TFT.cpp: In function 'void TFT_Draw_Radar()':
+src/View_Radar_TFT.cpp:492:14: warning: variable 'level' set but not used [-Wunused-but-set-variable]
+         bool level = false;
+              ^~~~~
+src/View_Radar_TFT.cpp:296:11: warning: unused variable 'tbx' [-Wunused-variable]
+   int16_t tbx, tby;
+           ^~~
+src/View_Radar_TFT.cpp:296:16: warning: unused variable 'tby' [-Wunused-variable]
+   int16_t tbx, tby;
+                ^~~
+src/View_Radar_TFT.cpp:323:9: warning: unused variable 'epd_Points' [-Wunused-variable]
+   float epd_Points[MAX_DRAW_POINTS][2];
+         ^~~~~~~~~~
+src/View_Radar_TFT.cpp:324:9: warning: unused variable 'pg_Points' [-Wunused-variable]
+   float pg_Points[MAX_DRAW_POINTS][2];
+         ^~~~~~~~~
+src/View_Compass_TFT.cpp: In function 'void TFT_compass_loop()':
+src/View_Compass_TFT.cpp:62:34: warning: too many arguments for format [-Wformat-extra-args]
+             compas2Sprite.printf("%d", ThisAircraft.Track, TFT_BLACK);
+                                  ^~~~
+src/View_Radar_TFT.cpp: In function 'void TFT_radar_loop()':
+src/View_Radar_TFT.cpp:503:64: warning: '%+d' directive output may be truncated writing between 2 and 11 bytes into a region of size 6 [-Wformat-truncation=]
+           snprintf(rel_vertical_str, sizeof(rel_vertical_str), "%+d", ((int)(Container[i].RelativeVertical * 3.28084f) / 100) * 100);  //convert to feet and round to the hundreds of feet
+                                                                ^~~~~
+src/View_Radar_TFT.cpp:503:64: note: directive argument in the range [-2147483600, 2147483600]
+src/View_Radar_TFT.cpp:503:19: note: 'snprintf' output between 3 and 12 bytes into a destination of size 6
+           snprintf(rel_vertical_str, sizeof(rel_vertical_str), "%+d", ((int)(Container[i].RelativeVertical * 3.28084f) / 100) * 100);  //convert to feet and round to the hundreds of feet
+           ~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/View_Radar_TFT.cpp:500:64: warning: '%+d' directive output may be truncated writing between 2 and 11 bytes into a region of size 6 [-Wformat-truncation=]
+           snprintf(rel_vertical_str, sizeof(rel_vertical_str), "%+d", ((int)(Container[i].RelativeVertical) / 10) * 10);  //round to the tens of meter
+                                                                ^~~~~
+src/View_Radar_TFT.cpp:500:64: note: directive argument in the range [-2147483640, 2147483640]
+src/View_Radar_TFT.cpp:500:19: note: 'snprintf' output between 3 and 12 bytes into a destination of size 6
+           snprintf(rel_vertical_str, sizeof(rel_vertical_str), "%+d", ((int)(Container[i].RelativeVertical) / 10) * 10);  //round to the tens of meter
+           ~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/View_Radar_TFT.cpp:618:37: warning: 'rel_heading' may be used uninitialized in this function [-Wmaybe-uninitialized]
+             gliderSprite.pushRotated(&sprite, rel_heading, TFT_BLACK);
+             ~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/View_Radar_TFT.cpp:493:15: note: 'rel_heading' was declared here
+         float rel_heading;
+               ^~~~~~~~~~~
+In file included from src/TFTHelper.h:21,
+                 from src/View_Text_TFT.cpp:1:
+lib/TFT_eSPI/TFT_eSPI.h:975:8: warning: #warning >>>>------>> TOUCH_CS pin not defined, TFT_eSPI touch functions will not be available! [-Wcpp]
+       #warning >>>>------>> TOUCH_CS pin not defined, TFT_eSPI touch functions will not be available!
+        ^~~~~~~
+In file included from src/View_Text_TFT.cpp:10:
+src/EEPROMHelper.h:30:16: note: offset of packed bit-field 'Settings::filter' has changed in GCC 4.4
+ typedef struct Settings {
+                ^~~~~~~~
+src/View_Text_TFT.cpp: In function 'void TFT_draw_text()':
+src/View_Text_TFT.cpp:112:8: warning: variable 'isFocused' set but not used [-Wunused-but-set-variable]
+   bool isFocused = false;
+        ^~~~~~~~~
+========================= [FAILED] Took 32.23 seconds =========================
+
+Environment         Status    Duration
+------------------  --------  ------------
+LILYGO_AMOLED_1_75  FAILED    00:00:32.234
+==================== 1 failed, 0 succeeded in 00:00:32.234 ====================

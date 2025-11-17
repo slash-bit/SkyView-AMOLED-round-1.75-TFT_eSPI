@@ -1040,10 +1040,15 @@ static bool play_file(char *filename, int volume)
 //          Serial.println("prepare data");
           state = DATA;
         }
-        //initialize i2s with configurations above
         i2s_driver_install((i2s_port_t)i2s_num, &i2s_config, 0, NULL);
         i2s_set_pin((i2s_port_t)i2s_num, &pin_config);
         i2s_zero_dma_buffer((i2s_port_t)i2s_num);  // Clear DMA buffer to prevent noise
+
+        // CRITICAL: Re-configure GPIO0 after I2S pin setup
+        // I2S driver may disable pull-ups on nearby GPIO pins
+        gpio_set_direction(GPIO_NUM_0, GPIO_MODE_INPUT);
+        gpio_set_pull_mode(GPIO_NUM_0, GPIO_PULLUP_ONLY);
+
         //set sample rates of i2s to sample rate of wav file
         i2s_set_sample_rates((i2s_port_t)i2s_num, wavProps.sampleRate);
         break;
@@ -1067,6 +1072,10 @@ static bool play_file(char *filename, int volume)
     wavfile.close();
     if (state == DATA) {
       i2s_driver_uninstall((i2s_port_t)i2s_num); //stop & destroy i2s driver
+
+      // CRITICAL: Restore GPIO0 pull-up after I2S driver uninstall
+      gpio_set_direction(GPIO_NUM_0, GPIO_MODE_INPUT);
+      gpio_set_pull_mode(GPIO_NUM_0, GPIO_PULLUP_ONLY);
     }
 
     return true;
@@ -1268,6 +1277,7 @@ static void ESP32_Button_setup()
   }
 
   int mode_button_pin = BUTTON_MODE_PIN;
+
   // Button(s) uses internal pull up resistor.
   pinMode(mode_button_pin, INPUT_PULLUP);
 
