@@ -3,7 +3,7 @@
 Follow this process to flash the board for the first time:
 
 1. **Download the required files**:  
-    - Navigate to the "binaries" folder in this repository.  
+    - Navigate to the ["binaries"](https://github.com/dingetje/SkyView-AMOLED-round-1.75-Waveshare/tree/main/binaries) folder in this repository.  
     - Download the files and place them in a folder on your PC, e.g., `C:\temp\SkyView`.
 
 2. **Download the ESP32 Flashing Tool**:  
@@ -14,13 +14,13 @@ Follow this process to flash the board for the first time:
     - Refer to the screenshot below and configure the files and addresses exactly as shown.
 
 
-![BoardSelection](https://github.com/slash-bit/SkyView-AMOLED-round-1.75-TFT_eSPI/blob/main/Documentation/images/AMOLED_Board_Flashing_setting.png)
+![BoardSelection](https://github.com/dingetje/SkyView-AMOLED-round-1.75-Waveshare/blob/main/Documentation/images/AMOLED_Board_Flashing_setting.png)
 
 4. **Select the COM Port**:  
     - In the `COM:` dropdown list, select the COM port of the AMOLED board (after connecting it to your PC).
 
 
-![Flashing-Tool-settings](https://github.com/slash-bit/SkyView-AMOLED-round-1.75-TFT_eSPI/blob/main/Documentation/images/Flashing_Tool_Settings.png)
+![Flashing-Tool-settings](https://github.com/dingetje/SkyView-AMOLED-round-1.75-Waveshare/blob/main/Documentation/images/Flashing_Tool_Settings.png)
 
 
 5. **Erase the Board**:  
@@ -38,6 +38,8 @@ Follow this process to flash the board for the first time:
 The SkyView software is now installed. You should be able to connect to it's AP after a few seconds and open the **Status** page at [http://192.168.1.1](http://192.168.1.1).
 
 For subsequent firmware updates, you can either repeat this method or use the much easier WebFlash process.
+
+For the OGN database and Voice alerts to work, make sure to read the [Preparing_SD_Card](Preparing_SD_Card.md) document.
 
 
 

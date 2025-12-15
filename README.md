@@ -8,7 +8,7 @@ SkyView is a traffic awareness device designed to display air traffic received t
   <img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/ab13a9ab-3450-4c14-bfc4-0d2d30d6ca7d" />
 
 - Best suited as a companion device for **SoftRF hardware**, providing user-friendly visualization of nearby traffic.
-- Proven compatibility with **SkyEcho**, **Stratux**, **PilotAware** and **PowerMouse** devices, as reported by builders.
+- Proven compatibility with **SkyEcho**, **Stratux**, **PilotAware** and **PowerMouse+** devices, as reported by builders.
 
 ### Waveshare board shenanigans
 - the Waveshare board offers two buttons. One labeled BOOT, the other PWR.
@@ -26,7 +26,8 @@ SkyView is a traffic awareness device designed to display air traffic received t
 - **Classic Serial Interface**
 - **Wi-Fi UDP Connection**
 - **Bluetooth LE**
-- **Legacy Bluetooth SPP is NOT possible**
+- ❗**Note: Legacy Bluetooth SPP is $\color{red}{\textrm{NOT}}$ possible** ❗
+
 ---
 
 ### Enhanced Functionality:
