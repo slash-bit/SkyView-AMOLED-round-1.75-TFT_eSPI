@@ -79,8 +79,8 @@ std::vector<String> scanForBLEDevices(uint32_t scanTimeSeconds)
   {
       disableLoopWDT();
   }
-  PRINTLN("[BLE] Starting scan...");
-  NimBLEScanResults results = scanner->getResults(3000, true);  // Convert seconds to milliseconds
+  PRINTLN("[BLE] Starting scan...(10 seconds)");
+  NimBLEScanResults results = scanner->getResults(10000, true);  // Convert seconds to milliseconds
   Serial.printf("[BLE] Scan completed: %d device(s) found.\n", results.getCount());
   // enable watchdog again after scan (if it was enabled)
   if (wdt_status) 
@@ -304,7 +304,7 @@ static void ESP32_Bluetooth_setup()
       pBLEScan->setInterval(1349);
       pBLEScan->setWindow(449);
       pBLEScan->setActiveScan(true);
-      pBLEScan->start(500, false);
+      pBLEScan->start(1500, false);
       BLE_Notify_TimeMarker = millis();
     }
     break;
