@@ -62,6 +62,7 @@ void Traffic_Add()
                 fo.Track = cip->Track;
                 fo.ClimbRate = cip->ClimbRate;
                 fo.AcftType = cip->AcftType;
+                fo.rssi = cip->rssi;  // Preserve RSSI from PFLAA
               } else {
                 // compute track from the two distance/bearing points
                 // also taking into account that this aircraft has moved too

@@ -22,6 +22,32 @@ unsigned long Battery_TimeMarker = 0;
 #include "aircrafts.h"
 #include "settings.h"
 
+// Aircraft type icons
+#include "../include/glider_icon.h"      // Type 1: Glider
+#include "../include/pg_icon.h"          // Type 7: Paraglider
+#include "../include/lightplane_icon.h"  // Type 2, 8: Towplane, Powered aircraft
+
+// Aircraft icons array - maps aircraft type to icon bitmap
+// Index corresponds to AIRCRAFT_TYPE enum values
+const unsigned short* aircrafts_icon[] = {
+  NULL,              // 0: AIRCRAFT_TYPE_UNKNOWN - no icon
+  glider_icon,       // 1: AIRCRAFT_TYPE_GLIDER
+  lightplane_icon,   // 2: AIRCRAFT_TYPE_TOWPLANE
+  NULL,              // 3: AIRCRAFT_TYPE_HELICOPTER - TODO: add helicopter_icon
+  NULL,              // 4: AIRCRAFT_TYPE_PARACHUTE - no icon
+  NULL,              // 5: AIRCRAFT_TYPE_DROPPLANE - no icon
+  NULL,              // 6: AIRCRAFT_TYPE_HANGGLIDER - no icon
+  pg_icon,           // 7: AIRCRAFT_TYPE_PARAGLIDER
+  lightplane_icon,   // 8: AIRCRAFT_TYPE_POWERED
+  NULL,              // 9: AIRCRAFT_TYPE_JET - no icon
+  NULL,              // 10: AIRCRAFT_TYPE_UFO - TODO: add bigplane_icon
+  NULL,              // 11: AIRCRAFT_TYPE_BALLOON - no icon
+  NULL,              // 12: AIRCRAFT_TYPE_ZEPPELIN - no icon
+  NULL,              // 13: AIRCRAFT_TYPE_UAV - no icon
+  NULL,              // 14: AIRCRAFT_TYPE_RESERVED - no icon
+  NULL               // 15: AIRCRAFT_TYPE_STATIC - no icon
+};
+
 extern xSemaphoreHandle spiMutex;
 // extern uint16_t read_voltage();
 extern TFT_eSPI tft;
@@ -30,10 +56,52 @@ extern TFT_eSprite bearingSprite;
 TFT_eSprite TextPopSprite = TFT_eSprite(&tft);
 
 
+// ===== UI Element IDs =====
+enum ElementID {
+  ELEM_ID_STRING = 0,
+  ELEM_ACFT_TYPE,
+  ELEM_NAME_STRING,
+  ELEM_RADIO_SIGNAL,      // Radio signal icon (replaces LastSeen)
+  ELEM_BATTERY,
+  ELEM_BATTERY_PCT,
+  ELEM_VERTICAL,
+  ELEM_CLIMBRATE_LABEL,
+  ELEM_CLIMBRATE,
+  ELEM_ALTITUDE,
+  ELEM_DISTANCE,
+  ELEM_LOCK,
+  ELEM_AIRCRAFT_COUNT,
+  ELEM_COUNT  // Total number of elements
+};
+
+// ===== Structure to hold element positions and bounding boxes =====
+struct UIElement {
+  int16_t x;
+  int16_t y;
+  int16_t width;
+  int16_t height;
+  const char* name;
+};
+
+// ===== Initialize element positions (based on test sketch) =====
+UIElement elements[ELEM_COUNT] = {
+  {287, 130, 120, 26, "ID"},           // ID string
+  {95, 117, 60, 52, "AircraftType"},   // Aircraft type icon
+  {110, 100, 200, 30, "Name"},         // Name string
+  {210, 116, 40, 60, "RadioSignal"},   // Radio signal icon (replaces LastSeen)
+  {186, 33, 60, 60, "Battery"},        // Battery indicator
+  {230, 33, 60, 26, "BattPct"},        // Battery percentage
+  {30, 213, 100, 50, "Vertical"},      // Vertical speed number
+  {327, 180, 120, 26, "ClimbLabel"},   // "Climbrate" label
+  {425, 213, 100, 50, "Climbrate"},    // Climbrate value (right-aligned)
+  {120, 276, 60, 26, "Altitude"},       // Altitude value
+  {205, 300, 150, 50, "Distance"},     // Distance value
+  {361, 95, 30, 30, "Lock"},           // Lock icon
+  {239, 382, 60, 40, "AircraftCnt"}    // Aircraft count
+};
+
 uint8_t TFT_current = 1;
 uint8_t pages =0;
-uint16_t lock_x = 100;
-uint16_t lock_y = 80;
 bool isLocked = false;
 uint16_t lock_color = TFT_LIGHTGREY;
 uint_fast16_t text_color = TFT_WHITE;
@@ -101,6 +169,95 @@ void setFocusOn(bool on, uint32_t id) {
   }
 }
 
+// Toggle state for RSSI display mode (false = icon, true = numeric)
+static bool rssiShowNumeric = false;
+
+// Function to toggle RSSI display mode
+void toggleRssiDisplay() {
+  rssiShowNumeric = !rssiShowNumeric;
+  extern unsigned long TFTTimeMarker;
+  TFTTimeMarker = 0; // Force update of the display
+}
+
+static void draw_radioSignal(int rssi, int lastseen) {
+  // Get position from elements array
+  int16_t radio_x = elements[ELEM_RADIO_SIGNAL].x;
+  int16_t radio_y = elements[ELEM_RADIO_SIGNAL].y;
+
+  //Determine wave color based on RSSI signal strength
+  uint16_t wave_color;
+  if (rssi >= -70) {
+    wave_color = TFT_GREEN;  // Strong signal
+  } else if (rssi >= -85) {
+    wave_color = TFT_YELLOW; // Medium signal
+  } else if (rssi >= -100) {
+    wave_color = TFT_ORANGE; // Weak signal
+  } else {
+    wave_color = TFT_DARKGREY; // No signal
+  }
+  //grey out waves if last seen > 4s
+  if (lastseen > 4) {
+    wave_color = TFT_DARKGREY;
+  }
+
+  // Display either numeric value or icon based on toggle state
+  if (rssiShowNumeric) {
+    // Display numeric RSSI value
+    sprite.setTextColor(wave_color, TFT_BLACK);
+    sprite.setFreeFont(&Orbitron_Light_24);
+    sprite.setTextDatum(TR_DATUM); 
+    // Draw RSSI value
+    char rssiStr[8];
+    snprintf(rssiStr, sizeof(rssiStr), "%d", rssi);
+    sprite.drawString(rssiStr, radio_x + 16, radio_y + 10);
+
+    // Draw "dB" label in font 4
+    sprite.setTextDatum(TL_DATUM);
+    sprite.drawString("dB", radio_x + 22, radio_y + 15, 4);
+
+    // Update element dimensions for touch area
+    elements[ELEM_RADIO_SIGNAL].width = 40;
+    elements[ELEM_RADIO_SIGNAL].height = 60;
+  } else {
+    // Draw icon (original code)
+    // Draw antenna base (vertical line)
+    sprite.fillRect(radio_x + 18, radio_y + 25, 4, 20, TFT_WHITE);
+    // Draw antenna base plate
+    sprite.fillRect(radio_x + 12, radio_y + 43, 16, 2, TFT_WHITE);
+
+    // Draw symmetrical HORIZONTAL radio waves on BOTH sides
+    // RIGHT SIDE waves (arcs from 45° to 135° - horizontal emission to the left)
+    // Inner wave (smallest)
+    sprite.drawArc(radio_x + 20, radio_y + 23, 10, 7, 45, 135, rssi >= -100 ? wave_color : TFT_DARKGREY, TFT_BLACK, true);
+    // Middle wave
+    sprite.drawArc(radio_x + 20, radio_y + 23, 20, 17, 45, 135, rssi >= -85 ? wave_color : TFT_DARKGREY, TFT_BLACK, true);
+    // Outer wave (largest)
+    sprite.drawArc(radio_x + 20, radio_y + 23, 30, 27, 45, 135, rssi >= -60 ? wave_color : TFT_DARKGREY, TFT_BLACK, true);
+
+    // LEFT SIDE waves (arcs from 225° to 315° - horizontal emission to the right)
+    // Inner wave (smallest)
+    sprite.drawArc(radio_x + 20, radio_y + 23, 10, 7, 225, 315, rssi >= -100 ? wave_color : TFT_DARKGREY, TFT_BLACK, true);
+    // Middle wave
+    sprite.drawArc(radio_x + 20, radio_y + 23, 20, 17, 225, 315, rssi >= -85 ? wave_color : TFT_DARKGREY, TFT_BLACK, true);
+    // Outer wave (largest)
+    sprite.drawArc(radio_x + 20, radio_y + 23, 30, 27, 225, 315, rssi >= -60 ? wave_color : TFT_DARKGREY, TFT_BLACK, true);
+
+    // Draw antenna tip (small circle)
+    sprite.fillCircle(radio_x + 20, radio_y + 23, 3, TFT_WHITE);
+    //cross radio signal icon if no signal for more than 7 seconds
+    if (lastseen > 7) {
+      sprite.drawLine(radio_x + 5, radio_y + 10, radio_x + 35, radio_y + 50, TFT_RED);
+      sprite.drawLine(radio_x + 35, radio_y + 10, radio_x + 5, radio_y + 50, TFT_RED);
+    }
+
+    // Update element dimensions for touch area
+    elements[ELEM_RADIO_SIGNAL].width = 40;
+    elements[ELEM_RADIO_SIGNAL].height = 60;
+  }
+
+}
+
+
 void TFT_draw_text() {
   int j=0;
   int bearing;
@@ -119,6 +276,7 @@ void TFT_draw_text() {
       traffic[j].altitude = traffic[j].fop->altitude;
       traffic[j].climbrate = Container[i].ClimbRate;
       traffic[j].acftType = Container[i].AcftType;
+      traffic[j].rssi = Container[i].rssi;
       traffic[j].lastSeen = now() - Container[i].timestamp;
       traffic[j].timestamp = Container[i].timestamp;
       if (focusOn) {
@@ -142,6 +300,8 @@ void TFT_draw_text() {
     // if expired, greyout and dim display
       resetClimbRateBuffer();
       text_color = TFT_DARKGREY;
+      bud_color = TFT_DARKGREY;
+      lock_color = TFT_DARKGREY;
       if (!dimmed) {
         dimmed = true;
       }
@@ -170,7 +330,7 @@ void TFT_draw_text() {
     if (buddy_name) {
       bud_color = TFT_GREEN;
     } else {
-      buddy_name = "Unknown";
+      buddy_name = id2_text;
     }
     
     float alt_mult = 1.0;
@@ -221,54 +381,87 @@ void TFT_draw_text() {
 #endif
   sprite.setTextDatum(TL_DATUM);
   sprite.fillSprite(TFT_BLACK);
-  sprite.setTextColor(bud_color, TFT_BLACK);
+  sprite.setTextColor(TFT_WHITE, TFT_BLACK);
 
-  sprite.drawString(traffic[TFT_current - 1].acftType == 7 ? "PG" : traffic[TFT_current - 1].acftType == 6 ? "HG" : traffic[TFT_current - 1].acftType == 1 ? "G" : traffic[TFT_current - 1].acftType == 2 ? "TAG" : traffic[TFT_current - 1].acftType == 3 ? "H" : traffic[TFT_current - 1].acftType == 9 ? "A" : String(traffic[TFT_current - 1].acftType), 87, 120, 4);
-  sprite.drawSmoothRoundRect(84, 110, 6, 5, 40, 40, TFT_WHITE);
-  sprite.setTextColor(text_color, TFT_BLACK);
-  sprite.drawString(id2_text, 140, 58, 4);
-  sprite.setFreeFont(&Orbitron_Light_24);
-  sprite.setCursor(140, 110);
-  sprite.printf(buddy_name);
-  sprite.setCursor(140,123,4);
-  sprite.printf("Last seen: %ds ago", traffic[TFT_current - 1].lastSeen);
-
-  sprite.drawRoundRect(150, 160, 170, 10, 5, TFT_CYAN);
-  sprite.fillRoundRect(150, 160, traffic[TFT_current - 1].lastSeen > 5 ? 1 : 170 - traffic[TFT_current - 1].lastSeen * 30, 10, 5, TFT_CYAN);
-
-  // sprite.drawString("Vertical", 27, 180, 4);
-  sprite.drawNumber((int)(traffic[TFT_current - 1].fop->RelativeVertical) * alt_mult, 30, 213, 7);
-  
+  // ===== Draw circular arc background =====
   sprite.drawSmoothArc(233, 233, 230, 225, 0, 360, TFT_DARKGREY, TFT_BLACK, true);
-  //add AV when average vario used
-  sprite.drawString(show_avg_vario ? "AV" : "", 377, 150, 4);
-  sprite.drawString("Climbrate ", 327, 180, 4);
-  // sprite.drawString(" o'clock ", 217, 280, 4);
-  //add AV when average vario used
 
-  sprite.setTextDatum(TR_DATUM);
-  sprite.drawFloat(traffic_vario, 1, 425, 213, 7);
-  sprite.drawNumber(disp_alt, 90, 280, 4);
+  // ===== Draw bearing arrow in center =====
+  bearingSprite.fillSprite(TFT_BLACK);
+  sprite.setPivot(233, 233);
+  bearingSprite.fillRect(0, 12, 40, 30, text_color == TFT_GREY ? text_color : TFT_CYAN);
+  bearingSprite.fillTriangle(40, 0, 40, 53, 78, 26, text_color == TFT_GREY ? text_color : TFT_CYAN);
+  bearingSprite.setPivot(39, 27);
+  bearingSprite.pushRotated(&sprite, bearing - 90);
+
+  // ===== Draw ID string =====
+  sprite.setTextColor(lock_color, TFT_BLACK);
+  sprite.drawString(id2_text, elements[ELEM_ID_STRING].x, elements[ELEM_ID_STRING].y, 4);
+
+  // ===== Draw Traffic Type (Icon type) =====
+  uint8_t acft_type = traffic[TFT_current - 1].acftType;
+
+  // Draw aircraft icon if available, otherwise fall back to text
+  if (acft_type < sizeof(aircrafts_icon)/sizeof(aircrafts_icon[0]) && aircrafts_icon[acft_type] != NULL) {
+    // Icon is 60x52, so we'll scale it down to fit the 30x30 space
+    // For now, push at full size - you may want to adjust position
+    sprite.setSwapBytes(true);
+    sprite.pushImage(elements[ELEM_ACFT_TYPE].x, elements[ELEM_ACFT_TYPE].y, 60, 52, aircrafts_icon[acft_type]);
+  } else {
+    // Fallback: draw text label if no icon available
+    sprite.setTextColor(TFT_WHITE, TFT_BLACK);
+    String type_label = (acft_type == 7) ? "PG" :
+                       (acft_type == 6) ? "HG" :
+                       (acft_type == 1) ? "G" :
+                       (acft_type == 2) ? "TAG" :
+                       (acft_type == 3) ? "H" :
+                       (acft_type == 9) ? "A" :
+                       String(acft_type);
+    sprite.drawString(type_label, elements[ELEM_ACFT_TYPE].x, elements[ELEM_ACFT_TYPE].y, 4);
+    sprite.drawSmoothRoundRect(elements[ELEM_ACFT_TYPE].x - 3, elements[ELEM_ACFT_TYPE].y - 10, 6, 5, 40, 40, TFT_WHITE);
+  }
+
+  // ===== Draw Buddy Name =====
+  sprite.setFreeFont(&Orbitron_Light_32);
+  sprite.setCursor(elements[ELEM_NAME_STRING].x, elements[ELEM_NAME_STRING].y);
+  sprite.printf(buddy_name);
+  // ===== Draw Radio Signal Icon (replaces Last Seen and progress bar) =====
+  draw_radioSignal(traffic[TFT_current - 1].rssi, traffic[TFT_current - 1].lastSeen);
+
+  // ===== Draw Vertical speed (left side) =====
   sprite.setTextDatum(TL_DATUM);
-  sprite.drawString("amsl", 100, 280, 2);
-  sprite.drawString("m", 430, 215, 4);
-  sprite.drawString("s", 435, 240, 4);
+  sprite.setTextColor(TFT_WHITE, TFT_BLACK);
+  sprite.drawNumber((int)(traffic[TFT_current - 1].fop->RelativeVertical) * alt_mult, elements[ELEM_VERTICAL].x, elements[ELEM_VERTICAL].y, 7);
 
-  sprite.drawWideLine(430, 240, 450, 241, 3, text_color);
-
+  // Draw altitude icon
   sprite.setSwapBytes(true);
   sprite.pushImage(40, 160, 32, 32, altitude2);
 
-  sprite.drawFloat((traffic[TFT_current - 1].fop->distance / 1000.0), 1, 170, 285, 7);
-  sprite.drawString("km", 250, 285, 4);
-    
-  // sprite.setSwapBytes(true);
-  // sprite.pushImage(300, 300, 32, 24, Speed);
-  // sprite.drawFloat(speed, 0, 340, 300, 6);
-  // sprite.drawString("km", 400, 300, 4); //speed km
-  // sprite.drawString("h", 400, 325, 4);  //speed h
-  // sprite.drawWideLine(400, 322, 420, 322, 3, TFT_WHITE);
+  // ===== Draw Climbrate label and value (right side) =====
+  sprite.setTextDatum(TL_DATUM);
+  sprite.drawString(show_avg_vario ? "AV" : "", 290, 180, 4);  //add AV when average vario used
+  sprite.drawString("Climbrate ", elements[ELEM_CLIMBRATE_LABEL].x, elements[ELEM_CLIMBRATE_LABEL].y, 4);
 
+  sprite.setTextDatum(TR_DATUM);
+  sprite.drawFloat(traffic_vario, 1, elements[ELEM_CLIMBRATE].x, elements[ELEM_CLIMBRATE].y, 7);
+
+  sprite.setTextDatum(TL_DATUM);
+  sprite.drawString("m", 430, 215, 4);
+  sprite.drawString("s", 435, 240, 4);
+  sprite.drawWideLine(430, 240, 450, 241, 3, text_color);
+
+  // ===== Draw Altitude =====
+  sprite.setTextDatum(TR_DATUM);
+  sprite.setFreeFont(&Orbitron_Light_24);
+  sprite.drawNumber(disp_alt, elements[ELEM_ALTITUDE].x, elements[ELEM_ALTITUDE].y);
+  sprite.setTextDatum(TL_DATUM);
+  sprite.drawString("amsl", 130, 280, 2);
+
+  // ===== Draw Distance =====
+  sprite.drawFloat((traffic[TFT_current - 1].fop->distance / 1000.0), 1, elements[ELEM_DISTANCE].x, elements[ELEM_DISTANCE].y, 7);
+  sprite.drawString("km", 285, 300, 4);
+    
+  // ===== Draw vertical speed arc indicators =====
   if (vertical > 55) {
     sprite.drawSmoothArc(233, 233, 230, 225, 90, constrain(90 + vertical / 10, 90, 150), vertical > 150 ? TFT_CYAN : TFT_RED, TFT_BLACK, true);
     sprite.drawString("+", 15, 226, 7);
@@ -277,63 +470,50 @@ void TFT_draw_text() {
   }
   else if (vertical < -55) {
     sprite.drawSmoothArc(233, 233, 230, 225, constrain(90 - abs(vertical) / 10, 30, 90), 90, vertical < -150 ? TFT_GREEN : TFT_RED, TFT_BLACK, true);
-    // sprite.drawWideLine(15, 231, 25, 231, 6, TFT_WHITE); //draw minus
   }
+
+  // ===== Draw climbrate arc indicators =====
   if (traffic_vario < -0.5) {
     sprite.drawSmoothArc(233, 233, 230, 225, 270, constrain(270 + abs(traffic_vario) * 12, 270, 360), traffic_vario < 2.5 ? TFT_BLUE : traffic_vario < 1 ? TFT_CYAN : TFT_GREEN, TFT_BLACK, true);
-    
   }
   else if (traffic_vario > 0.3) { //exclude 0 case so not to draw 360 arch
     sprite.drawSmoothArc(233, 233, 230, 225, constrain(270 - abs(traffic_vario) * 12, 190, 270), 270, traffic_vario > 3.5 ? TFT_RED : traffic_vario > 2 ? TFT_ORANGE : TFT_YELLOW, TFT_BLACK, true);
   }
-  // Lock page
+
+  // ===== Draw Lock icon =====
   if (focusOn) {
+    int16_t lock_x = elements[ELEM_LOCK].x;
+    int16_t lock_y = elements[ELEM_LOCK].y;
     sprite.fillSmoothRoundRect(lock_x, lock_y, 20, 20, 4, lock_color, TFT_BLACK);
     sprite.drawArc(lock_x + 9, lock_y, 9, 6, 90, 270, lock_color, TFT_BLACK, false);
   }
-  // sprite.drawSmoothRoundRect(lock_x, lock_y, 5, 3, 25, 25, lock_color, TFT_BLACK);
-  // sprite.drawArc(lock_x + (focusOn ? 12 : 30), lock_y, 9, 7, 90, 270, lock_color, TFT_BLACK);
-  //Airctafts
+
+  // ===== Draw Aircraft count =====
   sprite.setSwapBytes(true);
-  sprite.pushImage(190, 370, 32, 32, aircrafts);
-  sprite.drawNumber(Traffic_Count(), 240, 365, 6);
+  sprite.pushImage(190, 382, 32, 32, aircrafts);
+  sprite.drawNumber(Traffic_Count(), elements[ELEM_AIRCRAFT_COUNT].x, elements[ELEM_AIRCRAFT_COUNT].y, 6);
 
-  
-  bearingSprite.fillSprite(TFT_BLACK);
-  sprite.setPivot(233, 233);
-
-  bearingSprite.fillRect(0, 12, 40, 30, text_color == TFT_GREY ? text_color : TFT_CYAN);
-  bearingSprite.fillTriangle(40, 0, 40, 53, 78, 26, text_color == TFT_GREY ? text_color : TFT_CYAN);
-  bearingSprite.setPivot(39, 27);
-  bearingSprite.pushRotated(&sprite, bearing - 90);
+  // ===== Draw battery indicators =====
   draw_battery();
   draw_extBattery();
-  // if (pages > 1) {
-  //   for (int i = 1; i <= pages; i++)
-  //   { uint16_t wd = (pages -1) * 18; // width of frame 8px per circle + 8px between circles
 
-  //     sprite.fillCircle((233 - wd /2) + i * 18, 425, 5, i == TFT_current ? TFT_WHITE : TFT_DARKGREY);
+  // ===== Draw settings icon =====
+  sprite.setSwapBytes(true);
+  sprite.pushImage(320, 360, 36, 36, settings_icon_small);
 
-  //   }
-  // }
-  //draw settings icon
-    sprite.setSwapBytes(true);
-    sprite.pushImage(320, 360, 36, 36, settings_icon_small);
-    if (xSemaphoreTake(spiMutex, portMAX_DELAY)) {
-      if (dimmed) {
-        lcd_brightness(175);
-      } else {
-        lcd_brightness(225);
-      }
-      lcd_PushColors(6, 0, 466, 466, (uint16_t*)sprite.getPointer());
-      xSemaphoreGive(spiMutex);
+  // ===== Push sprite to display =====
+  if (xSemaphoreTake(spiMutex, portMAX_DELAY)) {
+    if (dimmed) {
+      lcd_brightness(175);
     } else {
-      Serial.println("Failed to acquire SPI semaphore!");
+      lcd_brightness(225);
     }
-    // Serial.print("TFT_current: "); Serial.println(TFT_current);
-    // Serial.print("pages: "); Serial.println(pages);     
-    }
-
+    lcd_PushColors(6, 0, 466, 466, (uint16_t*)sprite.getPointer());
+    xSemaphoreGive(spiMutex);
+  } else {
+    Serial.println("Failed to acquire SPI semaphore!");
+  }
+  } // Close if (j > 0) block
 }
 
 void TFT_text_Draw_Message(const char *msg1, const char *msg2)

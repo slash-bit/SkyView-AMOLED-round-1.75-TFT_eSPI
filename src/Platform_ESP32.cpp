@@ -58,6 +58,9 @@
 #define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
 #define TIME_TO_SLEEP  28        /* Time ESP32 will go to sleep (in seconds) */
 
+// Forward declarations
+static void ESP32_Button_setup();
+
 WebServer server ( 80 );
 
 std::shared_ptr<Arduino_IIC_DriveBus> IIC_Bus = std::make_shared<Arduino_HWIIC>(IIC_SDA, IIC_SCL, &Wire);
@@ -179,11 +182,20 @@ i2s_config_t i2s_config = {
 };
 
 i2s_pin_config_t pin_config = {
+    .mck_io_num   = I2S_PIN_NO_CHANGE,  // CRITICAL: Disable MCLK to prevent GPIO0 conflict
     .bck_io_num   = SOC_GPIO_PIN_BCLK,
     .ws_io_num    = SOC_GPIO_PIN_LRCLK,
     .data_out_num = SOC_GPIO_PIN_DOUT,
-    .data_in_num  = -1  // Not used
+    .data_in_num  = I2S_PIN_NO_CHANGE   // Not used
 };
+
+// Audio task for non-blocking playback
+#define AUDIO_MESSAGE_MAX_LEN 256
+TaskHandle_t audioTaskHandle = NULL;
+QueueHandle_t audioQueue = NULL;
+
+// Forward declaration
+void audioTask(void *parameter);
 #endif /* AUDIO */
 
 // RTC_DATA_ATTR int bootCount = 0;
@@ -370,6 +382,14 @@ static void ESP32_setup()
     // }
   }
   Serial.println(hw_info.revision);
+
+  // Initialize button BEFORE SD card to ensure GPIO 0 pull-up is active during SD init
+#if defined(BUTTONS)
+  Serial.println("Initializing button before SD card...");
+  ESP32_Button_setup();
+  delay(100);  // Allow button pull-ups to stabilize
+#endif
+
   // Initialise SD card.
 #if defined(SD_CARD)
   // Initialize dedicated SPI bus for SD card to prevent conflicts with other peripherals
@@ -429,7 +449,27 @@ static void ESP32_setup()
   // Initialize amplifier enable pin
   pinMode(SOC_GPIO_AMP_ENABLE, OUTPUT);
   digitalWrite(SOC_GPIO_AMP_ENABLE, LOW);  // Start with amplifier OFF
-  Serial.println("Audio amplifier pin initialized (GPIO 47)");
+
+  // Create audio queue and task for non-blocking playback
+  audioQueue = xQueueCreate(5, AUDIO_MESSAGE_MAX_LEN);  // Queue for 5 messages
+  if (audioQueue == NULL) {
+    Serial.println("ERROR: Failed to create audio queue!");
+  } else {
+    // Create audio task pinned to core 0 (opposite of main loop on core 1)
+    xTaskCreatePinnedToCore(
+      audioTask,           // Task function
+      "Audio Task",        // Task name
+      8192,                // Stack size (8KB for audio processing)
+      NULL,                // Parameters
+      2,                   // Priority (higher than main loop)
+      &audioTaskHandle,    // Task handle
+      0                    // Core 0
+    );
+
+    if (audioTaskHandle == NULL) {
+      Serial.println("ERROR: Failed to create audio task!");
+    }
+  }
 #endif
 }
 
@@ -1061,10 +1101,68 @@ static bool play_file(char *filename, int volume)
     return true;
 }
 
+// Audio task - runs continuously and processes audio messages from queue
+void audioTask(void *parameter) {
+  char message[AUDIO_MESSAGE_MAX_LEN];
+  char filename[MAX_FILENAME_LEN];
+
+  while (true) {
+    // Wait for audio message from queue (blocking)
+    if (xQueueReceive(audioQueue, &message, portMAX_DELAY) == pdTRUE) {
+      if (settings->voice == VOICE_OFF) {
+        continue;  // Skip if voice is disabled
+      }
+
+#if defined(SD_CARD) && defined(LILYGO_AMOLED_1_75)
+      // Reinitialize SD SPI bus before first access
+      SD_SPI.begin(SD_SCLK, SD_MISO, SD_MOSI, SD_CS);
+      delay(50);
+#endif
+
+      // Enable audio amplifier
+      digitalWrite(SOC_GPIO_AMP_ENABLE, HIGH);
+      delay(200);  // Give amplifier time to power up
+
+      bool wdt_status = loopTaskWDTEnabled;
+      if (wdt_status) {
+        disableLoopWDT();
+      }
+
+      // Parse message and play audio files
+      char messageCopy[AUDIO_MESSAGE_MAX_LEN];
+      strncpy(messageCopy, message, AUDIO_MESSAGE_MAX_LEN - 1);
+      messageCopy[AUDIO_MESSAGE_MAX_LEN - 1] = '\0';
+
+      char *word = strtok(messageCopy, " ");
+
+      while (word != NULL) {
+        strcpy(filename, WAV_FILE_PREFIX);
+        strcat(filename, settings->voice == VOICE_1 ? VOICE1_SUBDIR :
+                        (settings->voice == VOICE_2 ? VOICE2_SUBDIR :
+                        (settings->voice == VOICE_3 ? VOICE3_SUBDIR :
+                         "" )));
+        strcat(filename, word);
+        strcat(filename, WAV_FILE_SUFFIX);
+
+        int volume = (settings->voice == VOICE_3) ? 1 : 0;
+        play_file(filename, volume);
+        word = strtok(NULL, " ");
+
+        yield();
+      }
+
+      if (wdt_status) {
+        enableLoopWDT();
+      }
+
+      // Disable amplifier after playback
+      digitalWrite(SOC_GPIO_AMP_ENABLE, LOW);
+    }
+  }
+}
+
 static void ESP32_TTS(char *message)
 {
-    char filename[MAX_FILENAME_LEN];
-
     if (settings->voice == VOICE_OFF)
       return;
 
@@ -1074,94 +1172,22 @@ static void ESP32_TTS(char *message)
     return;
 #endif
 
-#if defined(SD_CARD) && defined(LILYGO_AMOLED_1_75)
-    // Reinitialize SD SPI bus before first access
-    // This ensures SPI pins are correctly configured after WiFi/display init
-    Serial.println("Reinitializing SD SPI bus for audio playback...");
-    SD_SPI.begin(SD_SCLK, SD_MISO, SD_MOSI, SD_CS);
-    delay(50);
-#endif
+    // Check if audio task and queue are initialized
+    if (audioQueue == NULL || audioTaskHandle == NULL) {
+      Serial.println("ERROR: Audio task not initialized!");
+      return;
+    }
 
-    // Enable audio amplifier
-    Serial.println("Enabling audio amplifier...");
-    digitalWrite(SOC_GPIO_AMP_ENABLE, HIGH);
-    delay(200);  // Give amplifier time to power up
+    // Queue the message for non-blocking playback
+    char messageBuffer[AUDIO_MESSAGE_MAX_LEN];
+    strncpy(messageBuffer, message, AUDIO_MESSAGE_MAX_LEN - 1);
+    messageBuffer[AUDIO_MESSAGE_MAX_LEN - 1] = '\0';
 
-    if (strcmp(message, "POST")) {   // *not* the post-booting demo
-      // Don't call SD.cardType() here - it can trigger unwanted remount attempts
-      // Instead, just try to access files and handle errors in play_file()
-#if defined(USE_EPAPER)
-      while (!SoC->EPD_is_ready()) {yield();}
-      EPD_Message("VOICE", "ALERT");
-      SoC->EPD_update(EPD_UPDATE_FAST);
-      while (!SoC->EPD_is_ready()) {yield();}
-#endif /* USE_EPAPER */
-      bool wdt_status = loopTaskWDTEnabled;
-
-      if (wdt_status) {
-        disableLoopWDT();
-      }
-
-      char *word = strtok (message, " ");
-
-      while (word != NULL)
-      {
-          strcpy(filename, WAV_FILE_PREFIX);
-          strcat(filename, settings->voice == VOICE_1 ? VOICE1_SUBDIR :
-                          (settings->voice == VOICE_2 ? VOICE2_SUBDIR :
-                          (settings->voice == VOICE_3 ? VOICE3_SUBDIR :
-                           "" )));
-          strcat(filename, word);
-          strcat(filename, WAV_FILE_SUFFIX);
-          // voice_3 in the existing collection of .wav files is quieter than voice_1,
-          // so make it a bit louder since we use it for more-urgent advisories
-          int volume = (settings->voice == VOICE_3)? 1 : 0;
-          play_file(filename, volume);
-          word = strtok (NULL, " ");
-
-          yield();
-
-          /* Poll input source(s) */
-          Input_loop();
-      }
-
-      if (wdt_status) {
-        enableLoopWDT();
-      }
-
-      // Disable amplifier after playback
-      digitalWrite(SOC_GPIO_AMP_ENABLE, LOW);
-      Serial.println("Audio amplifier disabled.");
-
-   } else {   /* post-booting */
-      // Don't call SD.cardType() - let play_file() handle file access errors
-      // SD card should be ready from initialization in ESP32_setup()
-
-      //Start-up tones
-      /* demonstrate the voice output */
-      delay(1500);
-      settings->voice = VOICE_1;
-      strcpy(filename, WAV_FILE_PREFIX);
-      strcat(filename, VOICE1_SUBDIR);
-      strcat(filename, "notice");
-      strcat(filename, WAV_FILE_SUFFIX);
-      if (!play_file(filename, 0)) {
-        Serial.println(F("POST: Failed to play voice1 notice.wav - check SD card and files"));
-      }
-      delay(1500);
-      settings->voice = VOICE_2;
-      strcpy(filename, WAV_FILE_PREFIX);
-      strcat(filename, VOICE2_SUBDIR);
-      strcat(filename, "notice");
-      strcat(filename, WAV_FILE_SUFFIX);
-      if (!play_file(filename, 0)) {   // No volume adjustment needed
-        Serial.println(F("POST: Failed to play voice2 notice.wav - check SD card and files"));
-      }
-      delay(1000);
-
-      // Disable amplifier after POST audio
-      digitalWrite(SOC_GPIO_AMP_ENABLE, LOW);
-      Serial.println("POST audio complete. Amplifier disabled.");
+    if (xQueueSend(audioQueue, &messageBuffer, 0) != pdTRUE) {
+      // Queue full - drop oldest message and try again
+      char dummyBuffer[AUDIO_MESSAGE_MAX_LEN];
+      xQueueReceive(audioQueue, &dummyBuffer, 0);  // Remove one item
+      xQueueSend(audioQueue, &messageBuffer, 0);   // Try again
     }
 }
 #endif /* AUDIO */
@@ -1249,9 +1275,24 @@ void handleEvent(AceButton* button, uint8_t eventType,
 
 static void ESP32_Button_setup()
 {
+  // Prevent double initialization - can be called multiple times safely
+  static bool button_initialized = false;
+  if (button_initialized) {
+    Serial.println("Button already initialized, skipping duplicate setup");
+    return;
+  }
+
   int mode_button_pin = BUTTON_MODE_PIN;
+
   // Button(s) uses internal pull up resistor.
   pinMode(mode_button_pin, INPUT_PULLUP);
+
+  // Configure GPIO 0 with strong pull-up BEFORE any SD card or audio operations
+  pinMode(GPIO_NUM_0, INPUT_PULLUP);
+  gpio_pullup_en(GPIO_NUM_0);
+  gpio_pulldown_dis(GPIO_NUM_0);
+
+  Serial.println("GPIO 0 configured with strong pull-up before button init");
 
   button_mode.init(mode_button_pin, HIGH, 0);  // Active LOW button (pressed = LOW)
 
@@ -1268,19 +1309,29 @@ static void ESP32_Button_setup()
   ModeButtonConfig->setFeature(ButtonConfig::kFeatureSuppressAfterLongPress);
 
   // Set timing parameters
+  // Increased debounce delay when SD_CARD and AUDIO enabled to filter noise
+#if defined(SD_CARD) && defined(AUDIO)
+  ModeButtonConfig->setDebounceDelay(50);  // Increased from 15ms to filter SPI noise
+#else
   ModeButtonConfig->setDebounceDelay(15);
+#endif
   ModeButtonConfig->setClickDelay(300);
   ModeButtonConfig->setDoubleClickDelay(400);
   ModeButtonConfig->setLongPressDelay(2000);
 
   // Create dedicated button task pinned to core 1 (same as touch task)
   xTaskCreatePinnedToCore(buttonTask, "Button Task", 4096, NULL, 1, &buttonTaskHandle, 1);
+
+  // Mark as initialized to prevent duplicate setup
+  button_initialized = true;
+  Serial.println("Button initialization complete");
 }
 
 // Button task - runs continuously to check button state
 void buttonTask(void *parameter) {
   // Wait 2 seconds after boot before monitoring buttons
   // This prevents false triggers during system initialization
+  // Button state is now cleared during setup, so shorter delay is safe
   vTaskDelay(pdMS_TO_TICKS(2000));
 
   while(true) {

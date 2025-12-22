@@ -24,6 +24,7 @@
 #include "TrafficHelper.h"
 #include "EEPROMHelper.h"
 #include "WiFiHelper.h"
+#include "SerialDebug.h"
 
 #include "SkyView.h"
 
@@ -40,6 +41,7 @@ TinyGPSCustom T_TurnRate        (nmea, "PFLAA", 8);
 TinyGPSCustom T_GroundSpeed     (nmea, "PFLAA", 9);
 TinyGPSCustom T_ClimbRate       (nmea, "PFLAA", 10);
 TinyGPSCustom T_AcftType        (nmea, "PFLAA", 11);
+TinyGPSCustom T_Rssi            (nmea, "PFLAA", 14);
 
 TinyGPSCustom S_RX              (nmea, "PFLAU", 1);
 TinyGPSCustom S_TX              (nmea, "PFLAU", 2);
@@ -87,7 +89,7 @@ static void NMEA_Parse_Character(char c)
       if (T_ID.isUpdated()) {
         fo = EmptyFO;
 
-//        Serial.print(F(" ID=")); Serial.print(ID.value());
+       Serial.print(F(" ID=")); Serial.print(T_ID.value());
 
         fo.ID = strtol(T_ID.value(), NULL, 16);
 
@@ -159,6 +161,11 @@ static void NMEA_Parse_Character(char c)
         //  Serial.print(F(" AcftType=")); Serial.print(T_AcftType.value());
           fo.AcftType = strtol(T_AcftType.value(), NULL, 16);
           // Serial.print(F(" AcftType=")); Serial.println(fo.AcftType);
+        }
+        if (T_Rssi.isUpdated())
+        {
+          fo.rssi = atoi(T_Rssi.value());
+          // Serial.print(F(" RSSI=")); Serial.println(fo.rssi);
         }
 
         old_level = ALARM_LEVEL_NONE;
@@ -480,7 +487,7 @@ void NMEA_loop()
             NMEA_bridge_buffer(c);
         else
 #if !defined(DISABLE_NMEAOUT)
-            Serial.print(c);
+            SerialPrint(c);
 #endif
         NMEA_Parse_Character(c);
         NMEA_TimeMarker = millis();

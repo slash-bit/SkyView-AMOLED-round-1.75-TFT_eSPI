@@ -94,8 +94,8 @@ float batteryToPercentage(float voltage) {
 }
 void draw_battery() {
     //Battery indicator
-    uint16_t battery_x = 295;
-    uint16_t battery_y = 35;
+    uint16_t battery_x = 186;
+    uint16_t battery_y = 33;
     float battery = 0;
     uint8_t batteryPercentage = 0;
     uint16_t batt_color = TFT_CYAN;
@@ -129,7 +129,7 @@ void draw_battery() {
     // Serial.println(fillWidth);
     sprite.fillRect(battery_x + 2, battery_y + 3, fillWidth, 14, batt_color);
 
-    sprite.setCursor(battery_x, battery_y + 24, 4);
+    sprite.setCursor(battery_x + 44, battery_y, 4);
     sprite.setTextColor(TFT_WHITE, TFT_BLACK);
     sprite.printf("%d%%", batteryPercentage); // Use %% to print the % character
 }

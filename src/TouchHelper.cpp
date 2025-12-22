@@ -277,7 +277,13 @@ void tapHandler(int x, int y) {
       show_avg_vario = false;
     }
     TFTTimeMarker = 0; // Force update of the display
-  } else if (TFT_view_mode == VIEW_MODE_RADAR) {
+  }
+  else if (x > 210 && x < 250 && y > 116 && y < 176 && TFT_view_mode == VIEW_MODE_TEXT) {
+    // Toggle RSSI display mode (numeric vs icon)
+    toggleRssiDisplay();
+    Serial.println("RSSI display mode toggled");
+  }
+  else if (TFT_view_mode == VIEW_MODE_RADAR) {
     findTouchedTarget(x, y);
 
   } else {

@@ -45,6 +45,7 @@ typedef struct traffic_struct {
     uint16_t  GroundSpeed;        // horizontalVelocity         // PFLAA only
     float     ClimbRate;          // verticalVelocity           // PFLAA only
     int8_t    AcftType;           // emitterCategory            // PFLAA only
+    int8_t    rssi;               // RSSI signal strength       // PFLAA only
 
     uint8_t   alert_level;        // minimum alarm level to generate voice warning
 
@@ -73,6 +74,7 @@ typedef struct traffic_by_dist_struct {
   uint16_t lastSeen;
   uint16_t altitude;
   uint8_t  acftType;
+  int8_t   rssi;
   time_t   timestamp;
 } traffic_by_dist_t;
 

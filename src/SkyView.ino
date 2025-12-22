@@ -53,6 +53,7 @@
 #include "TouchHelper.h"
 #include "BuddyHelper.h"
 #include "DemoHelper.h"
+#include "SerialDebug.h"
 
 #include "SPIFFS.h"
 #include "SkyView.h"
@@ -73,6 +74,7 @@ hardware_info_t hw_info = {
 };
 
 bool SPIFFS_is_mounted = false;
+bool USB_is_connected = false;  // Defined here, declared as extern in SerialDebug.h
 
 /* Poll input source(s) */
 void Input_loop() {
@@ -97,45 +99,50 @@ void Input_loop() {
 
 void setup()
 {
-  Serial.begin(SERIAL_OUT_BR); Serial.println();
+  // Check if USB is connected before initializing Serial
+  USB_is_connected = isUSBConnected();
+
+  if (USB_is_connected) {
+    Serial.begin(SERIAL_OUT_BR);
+    delay(100);  // Give serial time to initialize
+  }
+
   hw_info.soc = SoC_setup(); // Has to be very first procedure in the execution order
   delay(300);
- 
 
-  Serial.println();
-  Serial.print(F(SKYVIEW_IDENT));
-  Serial.print(SoC->name);
-  Serial.print(F(" FW.REV: " SKYVIEW_FIRMWARE_VERSION " DEV.ID: "));
-  Serial.println(String(SoC->getChipId(), HEX));
-  Serial.print(F(" FLASH ID: "));
-  Serial.println(String(SoC->getFlashId(), HEX));
-  Serial.print(F(" PSRAM FOUND: "));
-  Serial.println(ESP.getPsramSize() / 1024);
-  Serial.print(F(" FLASH SIZE: "));
-  Serial.print(ESP.getFlashChipSize() / 1024);
-  Serial.println(F(" KB"));
+  SerialPrintln();
+  SerialPrint(F(SKYVIEW_IDENT));
+  SerialPrint(SoC->name);
+  SerialPrint(F(" FW.REV: " SKYVIEW_FIRMWARE_VERSION " DEV.ID: "));
+  SerialPrintln(String(SoC->getChipId(), HEX));
+  SerialPrint(F(" FLASH ID: "));
+  SerialPrintln(String(SoC->getFlashId(), HEX));
+  SerialPrint(F(" PSRAM FOUND: "));
+  SerialPrintln(ESP.getPsramSize() / 1024);
+  SerialPrint(F(" FLASH SIZE: "));
+  SerialPrint(ESP.getFlashChipSize() / 1024);
+  SerialPrintln(F(" KB"));
   if (!SPIFFS.begin(true)) {
-    Serial.println("SPIFFS Mount Failed");
+    SerialPrintln("SPIFFS Mount Failed");
     SPIFFS_is_mounted = false;
     return;
   }
   SPIFFS_is_mounted = true;
-  Serial.println("SPIFFS mounted successfully");
-  Serial.print("SPIFFS Total space: ");
-  Serial.println(SPIFFS.totalBytes());
-  Serial.print("SPIFFS Used space: ");
-  Serial.println(SPIFFS.usedBytes());
+  SerialPrintln("SPIFFS mounted successfully");
+  SerialPrint("SPIFFS Total space: ");
+  SerialPrintln(SPIFFS.totalBytes());
+  SerialPrint("SPIFFS Used space: ");
+  SerialPrintln(SPIFFS.usedBytes());
 
   BuddyManager::readBuddyList("/buddylist.txt");  // Read buddy list from SPIFFS
-  // Print buddy list to serial
+  // Print buddy list to serial (uses SerialPrint internally)
   BuddyManager::printBuddyList();
 
-  Serial.println(F("Copyright (C) 2019-2021 Linar Yusupov. All rights reserved."));
-  // Serial.flush();
+  SerialPrintln(F("Copyright (C) 2019-2021 Linar Yusupov. All rights reserved."));
 
   EEPROM_setup();
   if (settings == NULL || SoC == NULL || SoC->Bluetooth == NULL) {
-    Serial.println("Error: Null pointer detected!");
+    SerialPrintln("Error: Null pointer detected!");
     return;
   }
 
@@ -145,14 +152,14 @@ void setup()
     if (settings->connection != CON_DEMO_FILE) {
       settings->connection = CON_DEMO_FILE;
       EEPROM_store();
-      Serial.println("Boot: Demo mode ON - connection set to CON_DEMO_FILE");
+      SerialPrintln("Boot: Demo mode ON - connection set to CON_DEMO_FILE");
     }
   } else {
     // Demo mode is OFF - restore to BLE if currently in demo mode
     if (settings->connection == CON_DEMO_FILE) {
       settings->connection = CON_BLUETOOTH_LE;
       EEPROM_store();
-      Serial.println("Boot: Demo mode OFF - connection set to CON_BLUETOOTH_LE");
+      SerialPrintln("Boot: Demo mode OFF - connection set to CON_BLUETOOTH_LE");
     }
   }
   WiFi.mode(WIFI_OFF); //temporarily disable WiFi to prevent issues during Bluetooth init
@@ -186,18 +193,18 @@ void setup()
 
 
 #if defined(USE_EPAPER)
-  Serial.println();
-  Serial.print(F("Intializing E-ink display module (may take up to 10 seconds)... "));
-  Serial.flush();
+  SerialPrintln();
+  SerialPrint(F("Intializing E-ink display module (may take up to 10 seconds)... "));
+  SerialFlush();
   hw_info.display = EPD_setup(true);
 #elif defined(USE_TFT)
   TFT_setup();
   hw_info.display = DISPLAY_TFT;
 #endif /* USE_EPAPER */
   if (hw_info.display != DISPLAY_NONE) {
-    Serial.println(F(" done."));
+    SerialPrintln(F(" done."));
   } else {
-    Serial.println(F(" failed!"));
+    SerialPrintln(F(" failed!"));
   }
 #if defined(CPU_float)
   esp_pm_config_esp32s3_t pm_config = {
