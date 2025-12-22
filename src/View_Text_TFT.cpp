@@ -22,6 +22,32 @@ unsigned long Battery_TimeMarker = 0;
 #include "aircrafts.h"
 #include "settings.h"
 
+// Aircraft type icons
+#include "../include/glider_icon.h"      // Type 1: Glider
+#include "../include/pg_icon.h"          // Type 7: Paraglider
+#include "../include/lightplane_icon.h"  // Type 2, 8: Towplane, Powered aircraft
+
+// Aircraft icons array - maps aircraft type to icon bitmap
+// Index corresponds to AIRCRAFT_TYPE enum values
+const unsigned short* aircrafts_icon[] = {
+  NULL,              // 0: AIRCRAFT_TYPE_UNKNOWN - no icon
+  glider_icon,       // 1: AIRCRAFT_TYPE_GLIDER
+  lightplane_icon,   // 2: AIRCRAFT_TYPE_TOWPLANE
+  NULL,              // 3: AIRCRAFT_TYPE_HELICOPTER - TODO: add helicopter_icon
+  NULL,              // 4: AIRCRAFT_TYPE_PARACHUTE - no icon
+  NULL,              // 5: AIRCRAFT_TYPE_DROPPLANE - no icon
+  NULL,              // 6: AIRCRAFT_TYPE_HANGGLIDER - no icon
+  pg_icon,           // 7: AIRCRAFT_TYPE_PARAGLIDER
+  lightplane_icon,   // 8: AIRCRAFT_TYPE_POWERED
+  NULL,              // 9: AIRCRAFT_TYPE_JET - no icon
+  NULL,              // 10: AIRCRAFT_TYPE_UFO - TODO: add bigplane_icon
+  NULL,              // 11: AIRCRAFT_TYPE_BALLOON - no icon
+  NULL,              // 12: AIRCRAFT_TYPE_ZEPPELIN - no icon
+  NULL,              // 13: AIRCRAFT_TYPE_UAV - no icon
+  NULL,              // 14: AIRCRAFT_TYPE_RESERVED - no icon
+  NULL               // 15: AIRCRAFT_TYPE_STATIC - no icon
+};
+
 extern xSemaphoreHandle spiMutex;
 // extern uint16_t read_voltage();
 extern TFT_eSPI tft;
@@ -33,7 +59,7 @@ TFT_eSprite TextPopSprite = TFT_eSprite(&tft);
 // ===== UI Element IDs =====
 enum ElementID {
   ELEM_ID_STRING = 0,
-  ELEM_PG_STRING,
+  ELEM_ACFT_TYPE,
   ELEM_NAME_STRING,
   ELEM_RADIO_SIGNAL,      // Radio signal icon (replaces LastSeen)
   ELEM_BATTERY,
@@ -60,7 +86,7 @@ struct UIElement {
 // ===== Initialize element positions (based on test sketch) =====
 UIElement elements[ELEM_COUNT] = {
   {287, 130, 120, 26, "ID"},           // ID string
-  {110, 130, 30, 26, "PG"},            // PG string (with circle)
+  {95, 117, 60, 52, "AircraftType"},   // Aircraft type icon
   {110, 100, 200, 30, "Name"},         // Name string
   {210, 116, 40, 60, "RadioSignal"},   // Radio signal icon (replaces LastSeen)
   {186, 33, 60, 60, "Battery"},        // Battery indicator
@@ -372,10 +398,28 @@ void TFT_draw_text() {
   sprite.setTextColor(lock_color, TFT_BLACK);
   sprite.drawString(id2_text, elements[ELEM_ID_STRING].x, elements[ELEM_ID_STRING].y, 4);
 
-  // ===== Draw Traffic Type (PG string with circle) =====
-  sprite.setTextColor(TFT_WHITE, TFT_BLACK);
-  sprite.drawString(traffic[TFT_current - 1].acftType == 7 ? "PG" : traffic[TFT_current - 1].acftType == 6 ? "HG" : traffic[TFT_current - 1].acftType == 1 ? "G" : traffic[TFT_current - 1].acftType == 2 ? "TAG" : traffic[TFT_current - 1].acftType == 3 ? "H" : traffic[TFT_current - 1].acftType == 9 ? "A" : String(traffic[TFT_current - 1].acftType), elements[ELEM_PG_STRING].x, elements[ELEM_PG_STRING].y, 4);
-  sprite.drawSmoothRoundRect(elements[ELEM_PG_STRING].x - 3, elements[ELEM_PG_STRING].y - 10, 6, 5, 40, 40, TFT_WHITE);
+  // ===== Draw Traffic Type (Icon type) =====
+  uint8_t acft_type = traffic[TFT_current - 1].acftType;
+
+  // Draw aircraft icon if available, otherwise fall back to text
+  if (acft_type < sizeof(aircrafts_icon)/sizeof(aircrafts_icon[0]) && aircrafts_icon[acft_type] != NULL) {
+    // Icon is 60x52, so we'll scale it down to fit the 30x30 space
+    // For now, push at full size - you may want to adjust position
+    sprite.setSwapBytes(true);
+    sprite.pushImage(elements[ELEM_ACFT_TYPE].x, elements[ELEM_ACFT_TYPE].y, 60, 52, aircrafts_icon[acft_type]);
+  } else {
+    // Fallback: draw text label if no icon available
+    sprite.setTextColor(TFT_WHITE, TFT_BLACK);
+    String type_label = (acft_type == 7) ? "PG" :
+                       (acft_type == 6) ? "HG" :
+                       (acft_type == 1) ? "G" :
+                       (acft_type == 2) ? "TAG" :
+                       (acft_type == 3) ? "H" :
+                       (acft_type == 9) ? "A" :
+                       String(acft_type);
+    sprite.drawString(type_label, elements[ELEM_ACFT_TYPE].x, elements[ELEM_ACFT_TYPE].y, 4);
+    sprite.drawSmoothRoundRect(elements[ELEM_ACFT_TYPE].x - 3, elements[ELEM_ACFT_TYPE].y - 10, 6, 5, 40, 40, TFT_WHITE);
+  }
 
   // ===== Draw Buddy Name =====
   sprite.setFreeFont(&Orbitron_Light_32);
@@ -395,7 +439,7 @@ void TFT_draw_text() {
 
   // ===== Draw Climbrate label and value (right side) =====
   sprite.setTextDatum(TL_DATUM);
-  sprite.drawString(show_avg_vario ? "AV" : "", 295, 180, 4);  //add AV when average vario used
+  sprite.drawString(show_avg_vario ? "AV" : "", 290, 180, 4);  //add AV when average vario used
   sprite.drawString("Climbrate ", elements[ELEM_CLIMBRATE_LABEL].x, elements[ELEM_CLIMBRATE_LABEL].y, 4);
 
   sprite.setTextDatum(TR_DATUM);
