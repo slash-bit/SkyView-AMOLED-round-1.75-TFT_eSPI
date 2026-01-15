@@ -248,7 +248,8 @@ enum
 	DB_AUTO,
 	DB_FLN,
 	DB_OGN,
-	DB_ICAO
+	DB_ICAO,
+	DB_PURETRACK  // PureTrack paraglider database (SPIFFS-based)
 };
 
 extern hardware_info_t hw_info;

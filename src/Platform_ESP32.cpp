@@ -42,7 +42,9 @@
 #include "BatteryHelper.h"
 // #include <SD.h>
 
-// #include "uCDB.hpp"
+#if defined(DB)
+#include "uCDB.hpp"
+#endif
 
 #include "driver/i2s.h"
 
@@ -984,6 +986,97 @@ static void ESP32_DB_fini()
 }
 #endif /* BUILD_SKYVIEW_HD */
 #endif
+
+// ============================================================================
+// ESP32S3 Database Implementation (SPIFFS-based for PureTrack)
+// ============================================================================
+#if defined(ESP32S3) && defined(DB)
+#include <SPIFFS.h>
+
+// SPIFFS-based uCDB instance for PureTrack database
+static uCDB<fs::SPIFFSFS, File> ucdb_spiffs(SPIFFS);
+static bool SPIFFS_ADB_is_open = false;
+
+static bool ESP32_DB_init()
+{
+  bool rval = false;
+
+  if (settings->adb == DB_NONE) {
+    return rval;
+  }
+
+  // Check if SPIFFS is mounted
+  if (!SPIFFS_is_mounted) {
+    Serial.println(F("SPIFFS not mounted, cannot open database"));
+    return rval;
+  }
+
+  if (settings->adb == DB_PURETRACK) {
+    if (SPIFFS.exists("/puretrack.cdb")) {
+      if (ucdb_spiffs.open("/puretrack.cdb") == CDB_OK) {
+        Serial.print(F("PureTrack records: "));
+        Serial.println(ucdb_spiffs.recordsNumber());
+        SPIFFS_ADB_is_open = true;
+        rval = true;
+      } else {
+        Serial.println(F("Failed to open PureTrack DB"));
+      }
+    } else {
+      Serial.println(F("PureTrack DB file not found on SPIFFS"));
+    }
+  }
+
+  return rval;
+}
+
+static int ESP32_DB_query(uint8_t type, uint32_t id, char *buf, size_t size,
+                            char *buf2=NULL, size_t size2=0)
+{
+  char key[8];
+  char out[64];
+  cdbResult rt;
+  int c, i = 0;
+
+  if (!SPIFFS_ADB_is_open) {
+    return -1;   // no database
+  }
+
+  // Format hex ID as 6-character uppercase key
+  snprintf(key, sizeof(key), "%06X", id);
+
+  rt = ucdb_spiffs.findKey(key, strlen(key));
+
+  if (rt == KEY_FOUND) {
+    // Read the label value directly (PureTrack has simple label, no pipe-delimited tokens)
+    while ((c = ucdb_spiffs.readValue()) != -1 && i < (int)(size - 1) && i < (int)(sizeof(out) - 1)) {
+      out[i++] = (char) c;
+    }
+    out[i] = '\0';
+
+    if (strlen(out) > 0) {
+      strncpy(buf, out, size);
+      buf[size - 1] = '\0';
+      if (buf2) buf2[0] = '\0';  // No secondary label for PureTrack
+      return 1;  // found
+    } else {
+      buf[0] = '\0';
+      if (buf2) buf2[0] = '\0';
+      return 2;   // found, but empty record
+    }
+  }
+
+  return 0;   // not found
+}
+
+static void ESP32_DB_fini()
+{
+  if (SPIFFS_ADB_is_open) {
+    ucdb_spiffs.close();
+    SPIFFS_ADB_is_open = false;
+  }
+}
+#endif /* ESP32S3 && DB */
+
 #if defined(AUDIO)
 /* write sample data to I2S */
 int i2s_write_sample_nb(uint32_t sample)

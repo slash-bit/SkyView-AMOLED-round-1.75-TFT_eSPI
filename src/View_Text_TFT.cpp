@@ -16,6 +16,7 @@
 unsigned long Battery_TimeMarker = 0;
 
 #include "SkyView.h"
+#include "SoCHelper.h"
 #include "BuddyHelper.h"
 #include "Speed.h"
 #include "altitude2.h"
@@ -326,11 +327,32 @@ void TFT_draw_text() {
     if (bearing < 0)    bearing += 360;
     if (bearing > 360)  bearing -= 360;
 
+    // Priority: 1. Buddy name (green), 2. Database label (cyan), 3. Hex ID (white)
     buddy_name = BuddyManager::findBuddyName(traffic[TFT_current - 1].fop->ID);
     if (buddy_name) {
       bud_color = TFT_GREEN;
     } else {
+#if defined(DB)
+      // Try aircraft database lookup (PureTrack, OGN, etc.)
+      static char db_label[32];
+      db_label[0] = '\0';
+      if (settings->adb != DB_NONE && SoC->DB_query) {
+        int result = SoC->DB_query(settings->adb,
+                                   traffic[TFT_current - 1].fop->ID,
+                                   db_label, sizeof(db_label),
+                                   NULL, 0);
+        if (result > 0 && strlen(db_label) > 0) {
+          buddy_name = db_label;
+          bud_color = TFT_CYAN;
+        } else {
+          buddy_name = id2_text;
+        }
+      } else {
+        buddy_name = id2_text;
+      }
+#else
       buddy_name = id2_text;
+#endif
     }
     
     float alt_mult = 1.0;
@@ -423,6 +445,7 @@ void TFT_draw_text() {
 
   // ===== Draw Buddy Name =====
   sprite.setFreeFont(&Orbitron_Light_32);
+  sprite.setTextColor(bud_color, TFT_BLACK);
   sprite.setCursor(elements[ELEM_NAME_STRING].x, elements[ELEM_NAME_STRING].y);
   sprite.printf(buddy_name);
   // ===== Draw Radio Signal Icon (replaces Last Seen and progress bar) =====
