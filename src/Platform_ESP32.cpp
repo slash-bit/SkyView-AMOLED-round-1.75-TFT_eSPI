@@ -42,6 +42,10 @@
 #include "BatteryHelper.h"
 // #include <SD.h>
 
+#if defined(WAVESHARE_AMOLED_1_75)
+#include "XPowersLib.h"
+#endif
+
 #if defined(DB)
 #include "uCDB.hpp"
 #endif
@@ -57,8 +61,13 @@
 #include "Arduino_DriveBus_Library.h"
 #include "../pins_config.h"
 
-#define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
-#define TIME_TO_SLEEP  28        /* Time ESP32 will go to sleep (in seconds) */
+#define uS_TO_S_FACTOR 1000000ULL  /* Conversion factor for micro seconds to seconds */
+#define TIME_TO_SLEEP  28          /* Time ESP32 will go to sleep (in seconds) */
+
+// Battery check interval during standby (in hours)
+// Device wakes periodically to check battery and force shutdown if critically low
+#define STANDBY_BATTERY_CHECK_HOURS  2
+#define STANDBY_BATTERY_CHECK_US     (STANDBY_BATTERY_CHECK_HOURS * 3600ULL * uS_TO_S_FACTOR)
 
 // Forward declarations
 static void ESP32_Button_setup();
@@ -260,9 +269,14 @@ void ESP32_fini()
   // Configure GPIO0 BEFORE disabling wake sources
   gpio_hold_en(GPIO_NUM_0);
 
-  // Disable all wake sources, then enable only GPIO0
+  // Disable all wake sources, then enable GPIO0 button wake AND timer wake
   esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
   esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, LOW);
+
+  // Enable periodic timer wake to check battery level during standby
+  // This prevents battery depletion by forcing full shutdown if battery gets critically low
+  esp_sleep_enable_timer_wakeup(STANDBY_BATTERY_CHECK_US);
+  Serial.printf("Standby battery check enabled: every %d hours\n", STANDBY_BATTERY_CHECK_HOURS);
 
   // Close communication buses
   SPI.end();
@@ -282,9 +296,91 @@ void ESP32_fini()
   esp_deep_sleep_start();
 }
 
+// Minimal battery check during standby wake - returns true if should shutdown
+static bool standby_battery_check()
+{
+  // Initialize I2C for PMU communication (minimal init)
+  Wire.begin(IIC_SDA, IIC_SCL, 400000);
+
+#if defined(LILYGO_AMOLED_1_75)
+  // Quick SY6970 battery voltage read
+  Arduino_SY6970 pmu(IIC_Bus, SY6970_DEVICE_ADDRESS, DRIVEBUS_DEFAULT_VALUE, DRIVEBUS_DEFAULT_VALUE);
+  if (!pmu.begin()) {
+    Serial.println("Standby check: PMU init failed");
+    Wire.end();
+    return false;  // Can't read, don't shutdown
+  }
+  // Enable ADC for voltage reading
+  pmu.IIC_Write_Device_State(pmu.Arduino_IIC_Power::Device::POWER_DEVICE_ADC_MEASURE,
+                             pmu.Arduino_IIC_Power::Device_State::POWER_DEVICE_ON);
+  delay(50);  // Allow ADC to settle
+  int voltage_mv = pmu.IIC_Read_Device_Value(pmu.Arduino_IIC_Power::Value_Information::POWER_BATTERY_VOLTAGE);
+  float voltage = voltage_mv / 1000.0f;
+  Serial.printf("Standby battery check: %.2fV\n", voltage);
+
+  if (voltage > 2.0f && voltage < BATTERY_CUTOFF_LIPO) {
+    Serial.println("CRITICAL: Battery low during standby - forcing full shutdown");
+    // Disconnect BATFET to prevent further drain
+    pmu.IIC_Write_Device_State(Arduino_IIC_Power::Device::POWER_BATFET_MODE,
+                               Arduino_IIC_Power::Device_State::POWER_DEVICE_OFF);
+    Wire.end();
+    return true;  // Signal shutdown (though BATFET disconnect should cut power)
+  }
+  Wire.end();
+  return false;
+
+#elif defined(WAVESHARE_AMOLED_1_75)
+  // Quick AXP2101 battery voltage read
+  XPowersPMU pmu;
+  if (!pmu.begin(Wire, AXP2101_SLAVE_ADDRESS, IIC_SDA, IIC_SCL)) {
+    Serial.println("Standby check: AXP2101 init failed");
+    Wire.end();
+    return false;
+  }
+  pmu.enableBattVoltageMeasure();
+  delay(50);
+  int voltage_mv = pmu.getBattVoltage();
+  float voltage = voltage_mv / 1000.0f;
+  Serial.printf("Standby battery check: %.2fV\n", voltage);
+
+  if (voltage > 2.0f && voltage < BATTERY_CUTOFF_LIPO) {
+    Serial.println("CRITICAL: Battery low during standby - forcing full shutdown");
+    pmu.shutdown();
+    Wire.end();
+    return true;
+  }
+  Wire.end();
+  return false;
+#else
+  return false;
+#endif
+}
+
 static void ESP32_setup()
 {
   pinMode(GPIO_NUM_0, INPUT);
+
+  // Check if wake was due to timer (periodic battery check during standby)
+  if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER) {
+    Serial.begin(38400);
+    Serial.println("\nTimer wake: checking battery...");
+
+    if (standby_battery_check()) {
+      // Battery critically low - shutdown complete, but just in case...
+      while(1) { delay(1000); }  // Should never reach here after BATFET disconnect
+    }
+
+    // Battery OK - go back to sleep
+    Serial.println("Battery OK, returning to standby...");
+    delay(100);
+
+    gpio_hold_en(GPIO_NUM_0);
+    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
+    esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, LOW);
+    esp_sleep_enable_timer_wakeup(STANDBY_BATTERY_CHECK_US);
+    esp_deep_sleep_start();
+  }
+
   //Check if the WAKE reason was button press
   if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT0) {
     if (digitalRead(GPIO_NUM_0) == LOW) {
