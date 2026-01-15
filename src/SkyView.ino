@@ -273,6 +273,11 @@ void shutdown(const char *msg)
 {
   SoC->WDT_fini();
 
+#if defined(AUDIO)
+  // Play tone when shutdown is triggered from Power Options Menu soft buttons
+  SoC->TTS("tone3");  // Sleep/Shutdown confirmation tone
+#endif
+
   /* Shutdown demo mode if active */
   if (settings->connection == CON_DEMO_FILE) {
     Demo_fini();

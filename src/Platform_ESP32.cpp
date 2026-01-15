@@ -207,6 +207,14 @@ static uint32_t ESP32_getFlashId()
 
 void ESP32_TFT_fini(const char *msg)
 {
+#if defined(AUDIO)
+  // Play prolonged descending tone for full shutdown
+  if (strstr(msg, "FULL POWER OFF") != NULL) {
+    SoC->TTS("tone4");  // Full shutdown tone
+    delay(1200);  // Wait for tone to complete
+  }
+#endif
+
   if (xSemaphoreTake(spiMutex, portMAX_DELAY)) {
     sprite.fillSprite(TFT_BLACK);
     sprite.setTextColor(TFT_BLUEBUTTON, TFT_BLACK);
@@ -1234,6 +1242,9 @@ void handleEvent(AceButton* button, uint8_t eventType,
       if (button == &button_mode) {
         if (TFT_view_mode == VIEW_MODE_POWER) {
           // Single click when menu is showing = Sleep
+#if defined(AUDIO)
+          SoC->TTS("tone3");  // Sleep tone
+#endif
           shutdown("SLEEP");
         } else {
           // Single click when menu not showing = Change mode
@@ -1245,7 +1256,7 @@ void handleEvent(AceButton* button, uint8_t eventType,
     case AceButton::kEventDoubleClicked:
       if (button == &button_mode) {
       // Double click when menu not showing = Restore previous view
-          TFT_DoubleClick();
+        TFT_DoubleClick();
       }
       break;
 
