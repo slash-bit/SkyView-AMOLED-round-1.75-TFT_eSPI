@@ -1042,7 +1042,7 @@ void TFT_radar_loop()
       if (hasFix) {
         TFT_Draw_Radar();
       } else {
-        Serial.println("No FIX");
+        Serial.println("GPS No FIX");
         TFT_radar_Draw_Message(NO_FIX_TEXT, NULL);
       }
     } else {
