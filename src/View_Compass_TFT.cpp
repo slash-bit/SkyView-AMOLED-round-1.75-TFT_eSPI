@@ -29,18 +29,21 @@ void TFT_compass_loop() {
             
             compas2Sprite.fillTriangle(215, 125, 235, 90, 255, 125, TFT_WHITE);
             compas2Sprite.setSwapBytes(true);
-            compas2Sprite.pushImage(180, 230, 32, 24, Speed);
-            compas2Sprite.setCursor(220, 240, 4);
+            compas2Sprite.pushImage(135, 230, 32, 24, Speed);
+            // compas2Sprite.setCursor(220, 240, 4);
+            compas2Sprite.setFreeFont(&Orbitron_Light_32);
+            compas2Sprite.setTextDatum(TL_DATUM);
+            compas2Sprite.setCursor(190, 250);
             switch (settings->units) {
                 case UNITS_METRIC:
-                    compas2Sprite.printf("%d", (int)(ThisAircraft.GroundSpeed * 1.852));  // knots to km/h
+                    compas2Sprite.printf("%d km/h", (int)(ThisAircraft.GroundSpeed * 1.852));  // knots to km/h
                     break;
                 case UNITS_IMPERIAL:
                 case UNITS_MIXED:
-                    compas2Sprite.printf("%d", (int)(ThisAircraft.GroundSpeed * 1.15078));  // knots to mph
+                    compas2Sprite.printf("%d mph", (int)(ThisAircraft.GroundSpeed * 1.15078));  // knots to mph
                     break;
                 default:
-                    compas2Sprite.printf("%d", (int)(ThisAircraft.GroundSpeed));  // knots
+                    compas2Sprite.printf("%d knots", (int)(ThisAircraft.GroundSpeed));  // knots
                     break;
             }
             compas2Sprite.pushImage(135, 280, 32, 32, SatDishpng);
@@ -55,8 +58,8 @@ void TFT_compass_loop() {
                 compas2Sprite.setTextColor(TFT_WHITE, TFT_BLACK);
             }
 
-            compas2Sprite.pushImage(255, 280, 32, 32, altitude2);
-            compas2Sprite.setCursor(300, 290, 4);
+            compas2Sprite.pushImage(235, 280, 32, 32, altitude2);
+            compas2Sprite.setCursor(280, 290, 4);
             switch (settings->units) {
                 case UNITS_METRIC:
                     compas2Sprite.printf("%d m", (int)(ThisAircraft.altitude));
@@ -69,7 +72,7 @@ void TFT_compass_loop() {
                     compas2Sprite.printf("%d ft", (int)(ThisAircraft.altitude * 3.28084));
                     break;
             }
-            compas2Sprite.setCursor(190, 160, 7);
+            compas2Sprite.setCursor(190, 150, 7);
             compas2Sprite.printf("%d", ThisAircraft.Track);
             // compas2Sprite.pushToSprite(&sprite, 0, 0, TFT_BLACK);
 

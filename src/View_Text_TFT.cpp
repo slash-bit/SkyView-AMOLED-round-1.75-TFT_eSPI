@@ -88,7 +88,7 @@ struct UIElement {
 UIElement elements[ELEM_COUNT] = {
   {287, 130, 120, 26, "ID"},           // ID string
   {95, 117, 60, 52, "AircraftType"},   // Aircraft type icon
-  {110, 100, 200, 30, "Name"},         // Name string
+  {90, 100, 200, 30, "Name"},         // Name string
   {210, 116, 40, 60, "RadioSignal"},   // Radio signal icon (replaces LastSeen)
   {186, 33, 60, 60, "Battery"},        // Battery indicator
   {230, 33, 60, 26, "BattPct"},        // Battery percentage
@@ -97,7 +97,7 @@ UIElement elements[ELEM_COUNT] = {
   {425, 213, 100, 50, "Climbrate"},    // Climbrate value (right-aligned)
   {120, 276, 60, 26, "Altitude"},       // Altitude value
   {205, 300, 150, 50, "Distance"},     // Distance value
-  {361, 95, 30, 30, "Lock"},           // Lock icon
+  {370, 95, 30, 30, "Lock"},           // Lock icon
   {239, 382, 60, 40, "AircraftCnt"}    // Aircraft count
 };
 
