@@ -541,17 +541,16 @@ void TFT_draw_text() {
 
 void TFT_text_Draw_Message(const char *msg1, const char *msg2)
 {
-    // int16_t  tbx, tby;
-    // uint16_t tbw, tbh;
-    // uint16_t x, y;
+  static bool msgBlink = false;
+  msgBlink = !msgBlink;  // Toggle blink state each call
 
   if (msg1 != NULL && strlen(msg1) != 0) {
-    // uint16_t radar_x = 0;
-    // uint16_t radar_y = 466 / 2;
-    // uint16_t radar_w = 466;
     sprite.setTextDatum(MC_DATUM);
     sprite.fillSprite(TFT_BLACK);
-    sprite.setTextColor(TFT_CYAN, TFT_BLACK);
+
+    // Blink the message text color between CYAN and dark
+    uint16_t msgColor = msgBlink ? TFT_CYAN : TFT_DARKGREY;
+    sprite.setTextColor(msgColor, TFT_BLACK);
 
     if (msg2 == NULL) {
       sprite.drawString(msg1, LCD_WIDTH / 2, LCD_HEIGHT / 2, 4);
@@ -559,31 +558,22 @@ void TFT_text_Draw_Message(const char *msg1, const char *msg2)
       sprite.drawString(msg1, LCD_WIDTH / 2, LCD_HEIGHT / 2 - 26, 4);
       sprite.drawString(msg2, LCD_WIDTH / 2, LCD_HEIGHT / 2 + 26, 4);
     }
-    //Battery indicator
+
+    // Battery indicator (always visible)
     draw_battery();
     draw_extBattery();
-    //draw settings icon
+
+    // Settings icon (always visible)
     sprite.setSwapBytes(true);
     sprite.pushImage(320, 360, 36, 36, settings_icon_small);
-    if (xSemaphoreTake(spiMutex, portMAX_DELAY)) {
-      lcd_brightness(0);
-      lcd_PushColors(display_column_offset, 0, 466, 466, (uint16_t*)sprite.getPointer());
-        for (int i = 0; i <= 255; i++)
-        {
-          lcd_brightness(i);
-            delay(2);
-        }
-        delay(200);
-        for (int i = 255; i >= 0; i--)
-        {
-          lcd_brightness(i);
-            delay(2);
-        }
-      xSemaphoreGive(spiMutex);
-  } else {
-      Serial.println("Failed to acquire SPI semaphore!");
-  }
 
+    if (xSemaphoreTake(spiMutex, portMAX_DELAY)) {
+      lcd_brightness(225);
+      lcd_PushColors(display_column_offset, 0, 466, 466, (uint16_t*)sprite.getPointer());
+      xSemaphoreGive(spiMutex);
+    } else {
+      Serial.println("Failed to acquire SPI semaphore!");
+    }
   }
 }
 
