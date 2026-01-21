@@ -31,7 +31,7 @@
 #define TFT_EXPIRATION_TIME     7 /* seconds for Text display*/ 
 
 #define NO_DATA_TEXT            "NO DATA"
-#define NO_FIX_TEXT             "NO FIX "
+#define NO_FIX_TEXT             "GPS NO FIX "
 
 #define NAVBOX1_TITLE           "ACFTS"
 #define NAVBOX2_TITLE           "DATA"

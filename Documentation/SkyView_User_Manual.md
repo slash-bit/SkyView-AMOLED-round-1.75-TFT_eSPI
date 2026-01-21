@@ -31,7 +31,9 @@ SkyView is a traffic awareness device for aviation that displays air traffic dat
 - Waveshare AMOLED 1.75" H0175Y003AM display
 
 **Compatible Traffic Sources:**
-- SoftRF devices (via Bluetooth LE)
+- SoftRF SenseCap T100-E (via Bluetooth LE)
+- XC Tracer (via Bluetooth LE)
+- FLARM POwerMouse (via NMEA over WiFi/Serial)
 - SkyEcho
 - Stratux
 - PilotAware
@@ -86,7 +88,7 @@ Identify known pilots easily on the Radar Screen. Buddies are displayed with spe
 
 **Managing Buddy Labels:**
 - Buddy labels can be enabled or disabled from the on-screen Settings Page
-- See [Uploading Buddy List](#uploading-buddy-list) for instructions on adding buddies
+- See [Managing Buddy List](#managing-buddy-list) for instructions on adding buddies
 
 ---
 
@@ -247,14 +249,34 @@ The SkyView web interface provides easy access to configuration, firmware update
    - Navigate to: [http://192.168.1.1](http://192.168.1.1)
    - The SkyView web interface will load
 
-### Uploading Buddy List
+### Managing Buddy List
 
-Add friends and familiar pilots to your buddy list for easy identification on the Radar screen.
-
+Add pilot buddies to your device for easy identification on the Radar screen.
+You can update buddy list directly via the web interface.
 **Buddy List File Format:**
-- Create a text file named `buddylist.txt`
+
 - Each line contains: `HEX_ID,Pilot Name`
 - Hex ID and name separated by a comma
+
+To edit buddy list directly on teh web page.
+**Edit Steps:**
+1. Access the SkyView web interface
+2. Navigate to the **Upload files** page
+![Upload Files](images/SkyView_File_Manager.png)
+3. Under Buddy List section click Edit Online button
+4. You can add/remove buddies in the text area
+5. Buddy labels will appear on the Radar screen
+
+ ![Buddy List Management](images/SkyView_BuddyList_Manager.png)
+
+Alternativly, you can download, edit and upload a buddy list file.
+
+**Download/ Upload Steps:**
+1. Access the SkyView web interface
+2. Navigate to the file upload page
+3. Select your `buddylist.txt` file
+4. Click Upload
+5. Buddy labels will appear on the Radar screen
 
 **Example `buddylist.txt`:**
 ```
@@ -262,12 +284,6 @@ Add friends and familiar pilots to your buddy list for easy identification on th
 1F00C1,Paul Guschlbauer
 ```
 
-**Upload Steps:**
-1. Access the SkyView web interface
-2. Navigate to the file upload page
-3. Select your `buddylist.txt` file
-4. Click Upload
-5. Buddy labels will appear on the Radar screen
 
 > **Note:** A sample buddy list file is included with SkyView releases.
 
@@ -285,7 +301,7 @@ Keep your SkyView up to date with the latest features and improvements.
    - Open browser to [http://192.168.1.1](http://192.168.1.1)
 
 3. **Upload Firmware**
-   - Navigate to firmware update page
+   - Navigate to firmware update page (Update firmware button)
    - Select the `.bin` firmware file
    - Click Upload
    - Wait for update to complete (device will restart automatically)
@@ -294,9 +310,8 @@ Keep your SkyView up to date with the latest features and improvements.
 - Watch the firmware update video: [https://youtu.be/NbYAM7KYvmo](https://youtu.be/NbYAM7KYvmo)
 
 **Latest Firmware Versions:**
-- [SkyView_firmware_VB006.bin](https://github.com/slash-bit/SkyView-AMOLED-round-1.75-TFT_eSPI/blob/main/binaries/SkyView_firmware_VB006.bin) (Latest)
-- [SkyView_firmware_VB005.bin](https://github.com/slash-bit/SkyView-AMOLED-round-1.75-TFT_eSPI/blob/main/binaries/SkyView_firmware_VB005.bin)
-- [SkyView_firmware_VB004.bin](https://github.com/slash-bit/SkyView-AMOLED-round-1.75-TFT_eSPI/blob/main/binaries/SkyView_firmware_VB004.bin)
+- [Release](https://github.com/slash-bit/SkyView-AMOLED-round-1.75-TFT_eSPI/releases) (Latest)
+
 
 ---
 

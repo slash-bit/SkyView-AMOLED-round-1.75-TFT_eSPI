@@ -25,7 +25,7 @@
 #include <Arduino.h>
 #endif /* ARDUINO */
 
-#define SKYVIEW_FIRMWARE_VERSION  "MB07cVB007"
+#define SKYVIEW_FIRMWARE_VERSION  "MB07cVB007c"
 #define SKYVIEW_IDENT     "SkyView-"
 
 #define DEFAULT_AP_SSID   "SoftRF-abc123"
@@ -248,7 +248,8 @@ enum
 	DB_AUTO,
 	DB_FLN,
 	DB_OGN,
-	DB_ICAO
+	DB_ICAO,
+	DB_PURETRACK  // PureTrack paraglider database (SPIFFS-based)
 };
 
 extern hardware_info_t hw_info;

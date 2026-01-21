@@ -16,6 +16,7 @@
 unsigned long Battery_TimeMarker = 0;
 
 #include "SkyView.h"
+#include "SoCHelper.h"
 #include "BuddyHelper.h"
 #include "Speed.h"
 #include "altitude2.h"
@@ -87,7 +88,7 @@ struct UIElement {
 UIElement elements[ELEM_COUNT] = {
   {287, 130, 120, 26, "ID"},           // ID string
   {95, 117, 60, 52, "AircraftType"},   // Aircraft type icon
-  {110, 100, 200, 30, "Name"},         // Name string
+  {90, 100, 200, 30, "Name"},         // Name string
   {210, 116, 40, 60, "RadioSignal"},   // Radio signal icon (replaces LastSeen)
   {186, 33, 60, 60, "Battery"},        // Battery indicator
   {230, 33, 60, 26, "BattPct"},        // Battery percentage
@@ -96,7 +97,7 @@ UIElement elements[ELEM_COUNT] = {
   {425, 213, 100, 50, "Climbrate"},    // Climbrate value (right-aligned)
   {120, 276, 60, 26, "Altitude"},       // Altitude value
   {205, 300, 150, 50, "Distance"},     // Distance value
-  {361, 95, 30, 30, "Lock"},           // Lock icon
+  {370, 95, 30, 30, "Lock"},           // Lock icon
   {239, 382, 60, 40, "AircraftCnt"}    // Aircraft count
 };
 
@@ -326,11 +327,32 @@ void TFT_draw_text() {
     if (bearing < 0)    bearing += 360;
     if (bearing > 360)  bearing -= 360;
 
+    // Priority: 1. Buddy name (green), 2. Database label (cyan), 3. Hex ID (white)
     buddy_name = BuddyManager::findBuddyName(traffic[TFT_current - 1].fop->ID);
     if (buddy_name) {
       bud_color = TFT_GREEN;
     } else {
+#if defined(DB)
+      // Try aircraft database lookup (PureTrack, OGN, etc.)
+      static char db_label[32];
+      db_label[0] = '\0';
+      if (settings->adb != DB_NONE && SoC->DB_query) {
+        int result = SoC->DB_query(settings->adb,
+                                   traffic[TFT_current - 1].fop->ID,
+                                   db_label, sizeof(db_label),
+                                   NULL, 0);
+        if (result > 0 && strlen(db_label) > 0) {
+          buddy_name = db_label;
+          bud_color = TFT_CYAN;
+        } else {
+          buddy_name = id2_text;
+        }
+      } else {
+        buddy_name = id2_text;
+      }
+#else
       buddy_name = id2_text;
+#endif
     }
     
     float alt_mult = 1.0;
@@ -423,6 +445,7 @@ void TFT_draw_text() {
 
   // ===== Draw Buddy Name =====
   sprite.setFreeFont(&Orbitron_Light_32);
+  sprite.setTextColor(bud_color, TFT_BLACK);
   sprite.setCursor(elements[ELEM_NAME_STRING].x, elements[ELEM_NAME_STRING].y);
   sprite.printf(buddy_name);
   // ===== Draw Radio Signal Icon (replaces Last Seen and progress bar) =====
@@ -518,17 +541,16 @@ void TFT_draw_text() {
 
 void TFT_text_Draw_Message(const char *msg1, const char *msg2)
 {
-    // int16_t  tbx, tby;
-    // uint16_t tbw, tbh;
-    // uint16_t x, y;
+  static bool msgBlink = false;
+  msgBlink = !msgBlink;  // Toggle blink state each call
 
   if (msg1 != NULL && strlen(msg1) != 0) {
-    // uint16_t radar_x = 0;
-    // uint16_t radar_y = 466 / 2;
-    // uint16_t radar_w = 466;
     sprite.setTextDatum(MC_DATUM);
     sprite.fillSprite(TFT_BLACK);
-    sprite.setTextColor(TFT_CYAN, TFT_BLACK);
+
+    // Blink the message text color between CYAN and dark
+    uint16_t msgColor = msgBlink ? TFT_CYAN : TFT_DARKGREY;
+    sprite.setTextColor(msgColor, TFT_BLACK);
 
     if (msg2 == NULL) {
       sprite.drawString(msg1, LCD_WIDTH / 2, LCD_HEIGHT / 2, 4);
@@ -536,31 +558,22 @@ void TFT_text_Draw_Message(const char *msg1, const char *msg2)
       sprite.drawString(msg1, LCD_WIDTH / 2, LCD_HEIGHT / 2 - 26, 4);
       sprite.drawString(msg2, LCD_WIDTH / 2, LCD_HEIGHT / 2 + 26, 4);
     }
-    //Battery indicator
+
+    // Battery indicator (always visible)
     draw_battery();
     draw_extBattery();
-    //draw settings icon
+
+    // Settings icon (always visible)
     sprite.setSwapBytes(true);
     sprite.pushImage(320, 360, 36, 36, settings_icon_small);
-    if (xSemaphoreTake(spiMutex, portMAX_DELAY)) {
-      lcd_brightness(0);
-      lcd_PushColors(display_column_offset, 0, 466, 466, (uint16_t*)sprite.getPointer());
-        for (int i = 0; i <= 255; i++)
-        {
-          lcd_brightness(i);
-            delay(2);
-        }
-        delay(200);
-        for (int i = 255; i >= 0; i--)
-        {
-          lcd_brightness(i);
-            delay(2);
-        }
-      xSemaphoreGive(spiMutex);
-  } else {
-      Serial.println("Failed to acquire SPI semaphore!");
-  }
 
+    if (xSemaphoreTake(spiMutex, portMAX_DELAY)) {
+      lcd_brightness(225);
+      lcd_PushColors(display_column_offset, 0, 466, 466, (uint16_t*)sprite.getPointer());
+      xSemaphoreGive(spiMutex);
+    } else {
+      Serial.println("Failed to acquire SPI semaphore!");
+    }
   }
 }
 

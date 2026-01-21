@@ -42,7 +42,13 @@
 #include "BatteryHelper.h"
 // #include <SD.h>
 
-// #include "uCDB.hpp"
+#if defined(WAVESHARE_AMOLED_1_75)
+#include "XPowersLib.h"
+#endif
+
+#if defined(DB)
+#include "uCDB.hpp"
+#endif
 
 #include "driver/i2s.h"
 
@@ -55,8 +61,13 @@
 #include "Arduino_DriveBus_Library.h"
 #include "../pins_config.h"
 
-#define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
-#define TIME_TO_SLEEP  28        /* Time ESP32 will go to sleep (in seconds) */
+#define uS_TO_S_FACTOR 1000000ULL  /* Conversion factor for micro seconds to seconds */
+#define TIME_TO_SLEEP  28          /* Time ESP32 will go to sleep (in seconds) */
+
+// Battery check timing during standby (in hours)
+// Device wakes ONE TIME after 6 hours to check battery and force shutdown if critically low
+#define STANDBY_BATTERY_CHECK_HOURS  6
+#define STANDBY_BATTERY_CHECK_US     (STANDBY_BATTERY_CHECK_HOURS * 3600ULL * uS_TO_S_FACTOR)
 
 // Forward declarations
 static void ESP32_Button_setup();
@@ -198,7 +209,9 @@ QueueHandle_t audioQueue = NULL;
 void audioTask(void *parameter);
 #endif /* AUDIO */
 
-// RTC_DATA_ATTR int bootCount = 0;
+// RTC memory to track standby battery check state
+// Persists across deep sleep, but reset on power cycle
+RTC_DATA_ATTR bool standby_battery_check_done = false;
 
 static uint32_t ESP32_getFlashId()
 {
@@ -258,9 +271,19 @@ void ESP32_fini()
   // Configure GPIO0 BEFORE disabling wake sources
   gpio_hold_en(GPIO_NUM_0);
 
-  // Disable all wake sources, then enable only GPIO0
+  // Disable all wake sources, then enable GPIO0 button wake AND timer wake
   esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
   esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, LOW);
+
+  // Enable ONE-TIME timer wake after 6 hours to check battery level during standby
+  // If battery is still OK after 6 hours, device will perform full power off (BATFET/shipping mode)
+  // This gives the device a reasonable standby period before being fully powered off
+  if (!standby_battery_check_done) {
+    esp_sleep_enable_timer_wakeup(STANDBY_BATTERY_CHECK_US);
+    Serial.printf("Standby battery check scheduled: %d hours until full power off\n", STANDBY_BATTERY_CHECK_HOURS);
+  } else {
+    Serial.println("Battery check already performed in this session, timer not rescheduled");
+  }
 
   // Close communication buses
   SPI.end();
@@ -280,9 +303,39 @@ void ESP32_fini()
   esp_deep_sleep_start();
 }
 
+
 static void ESP32_setup()
 {
   pinMode(GPIO_NUM_0, INPUT);
+
+  // Check if wake was due to timer (6-hour battery check during standby)
+  if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER) {
+    Serial.begin(38400);
+    Serial.println("\nTimer wake (6-hour standby check)...");
+
+    // Only perform battery check if not already done during this standby period
+    if (!standby_battery_check_done) {
+      standby_battery_check_done = true;  // Mark as done to prevent repeated checks
+      Serial.println("Checking battery after 6 hours of standby...");
+
+      if (standby_battery_check_and_shutdown()) {
+        // Battery critically low - shutdown initiated by standby_battery_check_and_shutdown()
+        while(1) { delay(1000); }  // Should never reach here after BATFET disconnect
+      }
+
+      // Battery OK after 6 hours - shutdown via full power off route (shipping mode)
+      Serial.println("Battery OK after 6 hours, initiating full power off...");
+      delay(500);
+      // Perform full power off using BatteryHelper function
+      power_off();
+      while(1) { delay(1000); }  // Infinite loop until power is cut
+    }
+
+    // If we get here, check was already done - this shouldn't happen
+    Serial.println("Battery check already performed during this standby period, powering off...");
+    while(1) { delay(1000); }
+  }
+
   //Check if the WAKE reason was button press
   if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT0) {
     if (digitalRead(GPIO_NUM_0) == LOW) {
@@ -984,6 +1037,97 @@ static void ESP32_DB_fini()
 }
 #endif /* BUILD_SKYVIEW_HD */
 #endif
+
+// ============================================================================
+// ESP32S3 Database Implementation (SPIFFS-based for PureTrack)
+// ============================================================================
+#if defined(ESP32S3) && defined(DB)
+#include <SPIFFS.h>
+
+// SPIFFS-based uCDB instance for PureTrack database
+static uCDB<fs::SPIFFSFS, File> ucdb_spiffs(SPIFFS);
+static bool SPIFFS_ADB_is_open = false;
+
+static bool ESP32_DB_init()
+{
+  bool rval = false;
+
+  if (settings->adb == DB_NONE) {
+    return rval;
+  }
+
+  // Check if SPIFFS is mounted
+  if (!SPIFFS_is_mounted) {
+    Serial.println(F("SPIFFS not mounted, cannot open database"));
+    return rval;
+  }
+
+  if (settings->adb == DB_PURETRACK) {
+    if (SPIFFS.exists("/puretrack.cdb")) {
+      if (ucdb_spiffs.open("/puretrack.cdb") == CDB_OK) {
+        Serial.print(F("PureTrack records: "));
+        Serial.println(ucdb_spiffs.recordsNumber());
+        SPIFFS_ADB_is_open = true;
+        rval = true;
+      } else {
+        Serial.println(F("Failed to open PureTrack DB"));
+      }
+    } else {
+      Serial.println(F("PureTrack DB file not found on SPIFFS"));
+    }
+  }
+
+  return rval;
+}
+
+static int ESP32_DB_query(uint8_t type, uint32_t id, char *buf, size_t size,
+                            char *buf2=NULL, size_t size2=0)
+{
+  char key[8];
+  char out[64];
+  cdbResult rt;
+  int c, i = 0;
+
+  if (!SPIFFS_ADB_is_open) {
+    return -1;   // no database
+  }
+
+  // Format hex ID as 6-character uppercase key
+  snprintf(key, sizeof(key), "%06X", id);
+
+  rt = ucdb_spiffs.findKey(key, strlen(key));
+
+  if (rt == KEY_FOUND) {
+    // Read the label value directly (PureTrack has simple label, no pipe-delimited tokens)
+    while ((c = ucdb_spiffs.readValue()) != -1 && i < (int)(size - 1) && i < (int)(sizeof(out) - 1)) {
+      out[i++] = (char) c;
+    }
+    out[i] = '\0';
+
+    if (strlen(out) > 0) {
+      strncpy(buf, out, size);
+      buf[size - 1] = '\0';
+      if (buf2) buf2[0] = '\0';  // No secondary label for PureTrack
+      return 1;  // found
+    } else {
+      buf[0] = '\0';
+      if (buf2) buf2[0] = '\0';
+      return 2;   // found, but empty record
+    }
+  }
+
+  return 0;   // not found
+}
+
+static void ESP32_DB_fini()
+{
+  if (SPIFFS_ADB_is_open) {
+    ucdb_spiffs.close();
+    SPIFFS_ADB_is_open = false;
+  }
+}
+#endif /* ESP32S3 && DB */
+
 #if defined(AUDIO)
 /* write sample data to I2S */
 int i2s_write_sample_nb(uint32_t sample)

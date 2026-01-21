@@ -439,6 +439,65 @@ void battery_fini() {
 
 }
 
+// Battery check after 6-hour standby - performs shutdown if battery critically low
+// Returns true if battery was critically low and shutdown was initiated
+bool standby_battery_check_and_shutdown()
+{
+  // Initialize I2C for PMU communication
+  Wire.begin(IIC_SDA, IIC_SCL, 400000);
+
+#if defined(LILYGO_AMOLED_1_75)
+  // Quick SY6970 battery voltage read
+  if (!SY6970 || !SY6970->begin()) {
+    Serial.println("Standby check: PMU init failed");
+    Wire.end();
+    return false;  // Can't read, don't shutdown
+  }
+  // Enable ADC for voltage reading
+  SY6970->IIC_Write_Device_State(SY6970->Arduino_IIC_Power::Device::POWER_DEVICE_ADC_MEASURE,
+                                 SY6970->Arduino_IIC_Power::Device_State::POWER_DEVICE_ON);
+  delay(50);  // Allow ADC to settle
+  int voltage_mv = SY6970->IIC_Read_Device_Value(SY6970->Arduino_IIC_Power::Value_Information::POWER_BATTERY_VOLTAGE);
+  float voltage = voltage_mv / 1000.0f;
+  Serial.printf("Standby battery check: %.2fV\n", voltage);
+
+  if (voltage > 2.0f && voltage < BATTERY_CUTOFF_LIPO) {
+    Serial.println("CRITICAL: Battery low during standby - forcing full shutdown");
+    // Use existing power_off function to disconnect BATFET
+    power_off();
+    Wire.end();
+    return true;  // Signal shutdown occurred
+  }
+  Wire.end();
+  return false;
+
+#elif defined(WAVESHARE_AMOLED_1_75)
+  // Quick AXP2101 battery voltage read
+  if (!power.begin(Wire, AXP2101_SLAVE_ADDRESS, IIC_SDA, IIC_SCL)) {
+    Serial.println("Standby check: AXP2101 init failed");
+    Wire.end();
+    return false;
+  }
+  power.enableBattVoltageMeasure();
+  delay(50);
+  int voltage_mv = power.getBattVoltage();
+  float voltage = voltage_mv / 1000.0f;
+  Serial.printf("Standby battery check: %.2fV\n", voltage);
+
+  if (voltage > 2.0f && voltage < BATTERY_CUTOFF_LIPO) {
+    Serial.println("CRITICAL: Battery low during standby - forcing full shutdown");
+    // Use existing power_off function to shutdown
+    power_off();
+    Wire.end();
+    return true;
+  }
+  Wire.end();
+  return false;
+#else
+  return false;
+#endif
+}
+
 void Battery_loop()
 {
   if (isTimeToBattery()) {

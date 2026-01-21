@@ -581,6 +581,7 @@ void handleSettings() {
 <option %s value='%d'>FlarmNet</option>\
 <option %s value='%d'>GliderNet</option>\
 <option %s value='%d'>ICAO</option>\
+<option %s value='%d'>PureTrack</option>\
 </select>\
 </td>\
 </tr>\
@@ -616,6 +617,7 @@ void handleSettings() {
   (settings->adb == DB_FLN       ? "selected" : ""), DB_FLN,
   (settings->adb == DB_OGN       ? "selected" : ""), DB_OGN,
   (settings->adb == DB_ICAO      ? "selected" : ""), DB_ICAO,
+  (settings->adb == DB_PURETRACK ? "selected" : ""), DB_PURETRACK,
   (settings->idpref == ID_REG    ? "selected" : ""), ID_REG,
   (settings->idpref == ID_TAIL   ? "selected" : ""), ID_TAIL,
   (settings->idpref == ID_MAM    ? "selected" : ""), ID_MAM
@@ -857,7 +859,7 @@ void handleRoot() {
   <table width=100%%>\
     <tr>\
       <td align=left><input type=button onClick=\"location.href='/settings'\" value='Settings'></td>\
-      <td align=center><input type=button onClick=\"location.href='/buddylist'\" value='Buddy List'></td>\
+      <td align=center><input type=button onClick=\"location.href='/uploads'\" value='Upload files'></td>\
       <td align=center><input type=button onClick=\"location.href='/ble/manage'\" value='BLE Manage'></td>\
       <td align=center><input type=button onClick=\"location.href='/about'\" value='About'></td>\
       <td align=right><input type=button onClick=\"location.href='/firmware'\" value='Firmware update'></td>\
@@ -882,67 +884,217 @@ void handleRoot() {
 
 
 
+// Legacy handlers (kept for backwards compatibility)
 void handleBuddyList() {
+  server.sendHeader("Location", "/uploads", true);
+  server.send(302, "text/plain", "Redirecting to /uploads");
+}
+
+void handleDemoFile() {
+  server.sendHeader("Location", "/uploads", true);
+  server.send(302, "text/plain", "Redirecting to /uploads");
+}
+
+void handlePureTrackDB() {
+  server.sendHeader("Location", "/uploads", true);
+  server.send(302, "text/plain", "Redirecting to /uploads");
+}
+
+// Interactive Buddy List Manager page
+void handleBuddyManager() {
   server.send(200, "text/html", R"rawliteral(
+<!DOCTYPE html>
 <html>
-  <head>
-    <title>Buddy List Management</title>
-  </head>
+<head>
+  <title>Buddy List Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a2e; color: #eee; }
+    h1 { color: #0ff; }
+    .buddy-row { display: flex; gap: 10px; margin: 8px 0; align-items: center; }
+    .buddy-row input { padding: 8px; border-radius: 4px; border: 1px solid #444; background: #16213e; color: #eee; }
+    .buddy-row input[name="hex"] { width: 100px; text-transform: uppercase; }
+    .buddy-row input[name="name"] { flex: 1; min-width: 150px; }
+    .btn { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; }
+    .btn-delete { background: #f44; color: #fff; }
+    .btn-add { background: #0f0; color: #000; }
+    .btn-save { background: #00f; color: #fff; margin-top: 15px; padding: 10px 30px; }
+    .btn:hover { opacity: 0.8; }
+    #buddyList { margin: 20px 0; }
+    .status { color: #0f0; margin: 15px 0; }
+    a { color: #0ff; }
+    .info { color: #888; font-size: 0.9em; margin-bottom: 15px; }
+  </style>
+</head>
 <body>
-  <h1>Upload or Download Buddy List</h1>
-  <input type="file" id="fileInput">
-  <button onclick="uploadFile()">Upload</button>
-  <button onclick="downloadFile()">Download</button>
+  <h1>Buddy List Manager</h1>
+  <p class="info">Edit your buddy list directly. Hex ID should be 6 characters (e.g., AABBCC).</p>
+
+  <div id="buddyList">Loading...</div>
+
+  <button class="btn btn-add" onclick="addRow()">+ Add Buddy</button>
+  <br>
+  <button class="btn btn-save" onclick="saveAll()">Save All Changes</button>
+
+  <div id="status" class="status"></div>
+  <br>
+  <a href="/uploads">Back to File Manager</a> | <a href="/">Home</a>
+
   <script>
-    function uploadFile() {
-      let file = document.getElementById('fileInput').files[0];
-      if (!file) return;
-      let formData = new FormData();
-      formData.append('file', file);
-      fetch('/upload-buddy', { method: 'POST', body: formData })
-      .then(response => alert('File uploaded successfully!'))
-      .catch(error => alert('Upload failed.'));
+    let buddies = [];
+
+    async function loadBuddies() {
+      try {
+        const res = await fetch('/api/buddies');
+        buddies = await res.json();
+        renderList();
+      } catch (e) {
+        document.getElementById('buddyList').innerHTML = 'Error loading buddies: ' + e;
+      }
     }
-    function downloadFile() {
-      window.location.href = '/download-buddy';
+
+    function renderList() {
+      let html = '';
+      buddies.forEach((b, i) => {
+        html += `<div class="buddy-row">
+          <input type="text" name="hex" maxlength="6" value="${b.hex}" placeholder="HEX ID" onchange="updateBuddy(${i}, 'hex', this.value)">
+          <input type="text" name="name" value="${b.name}" placeholder="Name" onchange="updateBuddy(${i}, 'name', this.value)">
+          <button class="btn btn-delete" onclick="deleteBuddy(${i})">X</button>
+        </div>`;
+      });
+      if (buddies.length === 0) {
+        html = '<p style="color:#888">No buddies yet. Click "Add Buddy" to add one.</p>';
+      }
+      document.getElementById('buddyList').innerHTML = html;
     }
+
+    function updateBuddy(index, field, value) {
+      buddies[index][field] = value.toUpperCase();
+    }
+
+    function addRow() {
+      buddies.push({hex: '', name: ''});
+      renderList();
+    }
+
+    function deleteBuddy(index) {
+      buddies.splice(index, 1);
+      renderList();
+    }
+
+    async function saveAll() {
+      // Filter out empty entries
+      const validBuddies = buddies.filter(b => b.hex.length === 6 && b.name.trim().length > 0);
+
+      document.getElementById('status').innerText = 'Saving...';
+
+      try {
+        const res = await fetch('/api/buddies', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(validBuddies)
+        });
+        const result = await res.text();
+        document.getElementById('status').innerText = result;
+        // Reload to show actual saved data
+        await loadBuddies();
+      } catch (e) {
+        document.getElementById('status').innerText = 'Error saving: ' + e;
+      }
+    }
+
+    // Load buddies on page load
+    loadBuddies();
   </script>
 </body>
 </html>
   )rawliteral");
 }
 
-void handleDemoFile() {
+// Unified file uploads page
+void handleUploads() {
   server.send(200, "text/html", R"rawliteral(
+<!DOCTYPE html>
 <html>
-  <head>
-    <title>Demo File Management</title>
-  </head>
+<head>
+  <title>SkyView File Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a2e; color: #eee; }
+    h1 { color: #0ff; }
+    .file-section { background: #16213e; border-radius: 8px; padding: 15px; margin: 15px 0; }
+    .file-section h3 { color: #0ff; margin-top: 0; }
+    .file-section p { color: #aaa; font-size: 0.9em; margin: 5px 0 10px 0; }
+    .btn { padding: 8px 16px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
+    .btn-upload { background: #0f0; color: #000; }
+    .btn-download { background: #00f; color: #fff; }
+    .btn:hover { opacity: 0.8; }
+    input[type="file"] { margin: 10px 0; }
+    .status { color: #0f0; margin-top: 10px; }
+    a { color: #0ff; }
+    .file-info { font-size: 0.8em; color: #888; }
+  </style>
+</head>
 <body>
-  <h1>Upload or Download Demo NMEA File</h1>
-  <p>Upload an NMEA file for demo/playback mode. The file will be played back line by line.</p>
-  <p>Default line delay: 160ms (adjustable). Target: 1 second between $GPGGA sentences.</p>
-  <input type="file" id="fileInput" accept=".nmea,.txt">
-  <button onclick="uploadFile()">Upload</button>
-  <button onclick="downloadFile()">Download</button>
-  <br><br>
-  <a href="/settings">Back to Settings</a>
+  <h1>SkyView File Manager</h1>
+  <p>Upload files to SPIFFS. Files must use exact names to be recognized.</p>
+
+  <div class="file-section">
+    <h3>Buddy List</h3>
+    <p>CSV format: hex_id,name (e.g., AABBCC,John Smith)</p>
+    <p class="file-info">Required filename: <b>buddylist.txt</b></p>
+    <input type="file" id="buddyFile" accept=".txt,.csv">
+    <br>
+    <button class="btn btn-upload" onclick="uploadFile('buddyFile', '/upload-buddy')">Upload</button>
+    <button class="btn btn-download" onclick="location.href='/download-buddy'">Download</button>
+    <button class="btn" style="background:#0ff;color:#000" onclick="location.href='/buddy-manager'">Edit Online</button>
+  </div>
+
+  <div class="file-section">
+    <h3>PureTrack Database</h3>
+    <p>Aircraft labels database (CDB format). Enable in Settings > Aircrafts data > PureTrack</p>
+    <p class="file-info">Required filename: <b>puretrack.cdb</b></p>
+    <input type="file" id="puretrackFile" accept=".cdb">
+    <br>
+    <button class="btn btn-upload" onclick="uploadFile('puretrackFile', '/upload-puretrack')">Upload</button>
+    <button class="btn btn-download" onclick="location.href='/download-puretrack'">Download</button>
+  </div>
+
+  <div class="file-section">
+    <h3>Demo NMEA File</h3>
+    <p>NMEA playback file for demo mode. Enable in Settings > Demo mode</p>
+    <p class="file-info">Required filename: <b>demo.nmea</b></p>
+    <input type="file" id="demoFile" accept=".nmea,.txt">
+    <br>
+    <button class="btn btn-upload" onclick="uploadFile('demoFile', '/upload-demo')">Upload</button>
+    <button class="btn btn-download" onclick="location.href='/download-demo'">Download</button>
+  </div>
+
+  <div id="status" class="status"></div>
+  <br>
+  <a href="/settings">Back to Settings</a> | <a href="/">Home</a>
+
   <script>
-    function uploadFile() {
-      let file = document.getElementById('fileInput').files[0];
+    function uploadFile(inputId, endpoint) {
+      let fileInput = document.getElementById(inputId);
+      let file = fileInput.files[0];
       if (!file) {
         alert('Please select a file first');
         return;
       }
       let formData = new FormData();
       formData.append('file', file);
-      fetch('/upload-demo', { method: 'POST', body: formData })
-      .then(response => response.text())
-      .then(data => alert(data))
-      .catch(error => alert('Upload failed: ' + error));
-    }
-    function downloadFile() {
-      window.location.href = '/download-demo';
+      document.getElementById('status').innerText = 'Uploading...';
+      fetch(endpoint, { method: 'POST', body: formData })
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('status').innerText = data;
+          alert(data);
+        })
+        .catch(error => {
+          document.getElementById('status').innerText = 'Upload failed: ' + error;
+          alert('Upload failed: ' + error);
+        });
     }
   </script>
 </body>
@@ -1091,6 +1243,8 @@ void Web_setup()
   server.on ( "/settings", handleSettings );
   server.on("/buddylist", handleBuddyList);
   server.on("/demofile", handleDemoFile);
+  server.on("/uploads", handleUploads);
+  server.on("/buddy-manager", handleBuddyManager);
 
   server.on("/upload-buddy", HTTP_POST, []() {
     server.send(200, "text/plain", "Buddy list uploaded");
@@ -1120,6 +1274,78 @@ void Web_setup()
     }
     server.streamFile(file, "text/plain");
     file.close();
+  });
+
+  // API endpoint: GET buddies as JSON
+  server.on("/api/buddies", HTTP_GET, []() {
+    DynamicJsonDocument doc(4096);
+    JsonArray arr = doc.to<JsonArray>();
+
+    File file = SPIFFS.open("/buddylist.txt", "r");
+    if (file && !file.isDirectory()) {
+      while (file.available()) {
+        String line = file.readStringUntil('\n');
+        line.trim();
+        if (line.length() > 0) {
+          int commaIdx = line.indexOf(',');
+          if (commaIdx > 0) {
+            JsonObject obj = arr.createNestedObject();
+            obj["hex"] = line.substring(0, commaIdx);
+            obj["name"] = line.substring(commaIdx + 1);
+          }
+        }
+      }
+      file.close();
+    }
+
+    String json;
+    serializeJson(doc, json);
+    server.send(200, "application/json", json);
+  });
+
+  // API endpoint: POST buddies as JSON
+  server.on("/api/buddies", HTTP_POST, []() {
+    if (!server.hasArg("plain")) {
+      server.send(400, "text/plain", "No data received");
+      return;
+    }
+
+    String body = server.arg("plain");
+    DynamicJsonDocument doc(4096);
+    DeserializationError error = deserializeJson(doc, body);
+
+    if (error) {
+      server.send(400, "text/plain", "Invalid JSON");
+      return;
+    }
+
+    // Write to file
+    File file = SPIFFS.open("/buddylist.txt", FILE_WRITE);
+    if (!file) {
+      server.send(500, "text/plain", "Failed to open file for writing");
+      return;
+    }
+
+    JsonArray arr = doc.as<JsonArray>();
+    int count = 0;
+    for (JsonObject obj : arr) {
+      String hex = obj["hex"].as<String>();
+      String name = obj["name"].as<String>();
+      hex.toUpperCase();
+      if (hex.length() == 6 && name.length() > 0) {
+        file.print(hex);
+        file.print(",");
+        file.println(name);
+        count++;
+      }
+    }
+    file.close();
+
+    // Reload buddy list into memory
+    BuddyManager::readBuddyList();
+
+    String response = "Saved " + String(count) + " buddies successfully";
+    server.send(200, "text/plain", response);
   });
 
 server.on("/upload-demo", HTTP_POST, []() {
@@ -1178,6 +1404,55 @@ server.on("/upload-demo", HTTP_POST, []() {
     server.streamFile(file, "text/plain");
     file.close();
   });
+
+  // PureTrack database upload/download handlers
+  server.on("/puretrackdb", handlePureTrackDB);
+
+  server.on("/upload-puretrack", HTTP_POST, []() {
+    server.send(200, "text/plain", "PureTrack database uploaded successfully. Restart device to apply.");
+  }, []() {
+    HTTPUpload& upload = server.upload();
+    static File fsUploadFile;
+
+    if (upload.status == UPLOAD_FILE_START) {
+      Serial.println("Starting upload: puretrack.cdb");
+
+      // Delete existing file first to ensure overwrite
+      if (SPIFFS.exists("/puretrack.cdb")) {
+        SPIFFS.remove("/puretrack.cdb");
+        Serial.println("Old puretrack.cdb deleted.");
+      }
+
+      fsUploadFile = SPIFFS.open("/puretrack.cdb", FILE_WRITE);
+      if (!fsUploadFile) {
+        Serial.println("Failed to open puretrack.cdb for writing!");
+      }
+
+    } else if (upload.status == UPLOAD_FILE_WRITE) {
+      yield();  // Feed watchdog during write
+      if (fsUploadFile) {
+        fsUploadFile.write(upload.buf, upload.currentSize);
+      }
+
+    } else if (upload.status == UPLOAD_FILE_END) {
+      if (fsUploadFile)
+        fsUploadFile.close();
+      Serial.print("PureTrack DB upload complete. Size: ");
+      Serial.println(upload.totalSize);
+    }
+  });
+
+  server.on("/download-puretrack", HTTP_GET, []() {
+    File file = SPIFFS.open("/puretrack.cdb", "r");
+    if (!file || file.isDirectory()) {
+      server.send(404, "text/plain", "PureTrack database not found");
+      return;
+    }
+    server.sendHeader("Content-Disposition", "attachment; filename=\"puretrack.cdb\"");
+    server.streamFile(file, "application/octet-stream");
+    file.close();
+  });
+
   server.on("/ble/manage", HTTP_GET, []() {
   server.send(200, "text/html; charset=UTF-8", bleManagerHTML);
   });
