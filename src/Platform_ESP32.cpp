@@ -303,66 +303,6 @@ void ESP32_fini()
   esp_deep_sleep_start();
 }
 
-// Minimal battery check after 6-hour standby - returns true if battery critically low
-// If battery is low, device will be powered off via BATFET disconnect (shipping mode)
-static bool standby_battery_check()
-{
-  // Initialize I2C for PMU communication (minimal init)
-  Wire.begin(IIC_SDA, IIC_SCL, 400000);
-
-#if defined(LILYGO_AMOLED_1_75)
-  // Quick SY6970 battery voltage read
-  Arduino_SY6970 pmu(IIC_Bus, SY6970_DEVICE_ADDRESS, DRIVEBUS_DEFAULT_VALUE, DRIVEBUS_DEFAULT_VALUE);
-  if (!pmu.begin()) {
-    Serial.println("Standby check: PMU init failed");
-    Wire.end();
-    return false;  // Can't read, don't shutdown
-  }
-  // Enable ADC for voltage reading
-  pmu.IIC_Write_Device_State(pmu.Arduino_IIC_Power::Device::POWER_DEVICE_ADC_MEASURE,
-                             pmu.Arduino_IIC_Power::Device_State::POWER_DEVICE_ON);
-  delay(50);  // Allow ADC to settle
-  int voltage_mv = pmu.IIC_Read_Device_Value(pmu.Arduino_IIC_Power::Value_Information::POWER_BATTERY_VOLTAGE);
-  float voltage = voltage_mv / 1000.0f;
-  Serial.printf("Standby battery check: %.2fV\n", voltage);
-
-  if (voltage > 2.0f && voltage < BATTERY_CUTOFF_LIPO) {
-    Serial.println("CRITICAL: Battery low during standby - forcing full shutdown");
-    // Disconnect BATFET to prevent further drain
-    pmu.IIC_Write_Device_State(Arduino_IIC_Power::Device::POWER_BATFET_MODE,
-                               Arduino_IIC_Power::Device_State::POWER_DEVICE_OFF);
-    Wire.end();
-    return true;  // Signal shutdown (though BATFET disconnect should cut power)
-  }
-  Wire.end();
-  return false;
-
-#elif defined(WAVESHARE_AMOLED_1_75)
-  // Quick AXP2101 battery voltage read
-  XPowersPMU pmu;
-  if (!pmu.begin(Wire, AXP2101_SLAVE_ADDRESS, IIC_SDA, IIC_SCL)) {
-    Serial.println("Standby check: AXP2101 init failed");
-    Wire.end();
-    return false;
-  }
-  pmu.enableBattVoltageMeasure();
-  delay(50);
-  int voltage_mv = pmu.getBattVoltage();
-  float voltage = voltage_mv / 1000.0f;
-  Serial.printf("Standby battery check: %.2fV\n", voltage);
-
-  if (voltage > 2.0f && voltage < BATTERY_CUTOFF_LIPO) {
-    Serial.println("CRITICAL: Battery low during standby - forcing full shutdown");
-    pmu.shutdown();
-    Wire.end();
-    return true;
-  }
-  Wire.end();
-  return false;
-#else
-  return false;
-#endif
-}
 
 static void ESP32_setup()
 {
@@ -378,31 +318,16 @@ static void ESP32_setup()
       standby_battery_check_done = true;  // Mark as done to prevent repeated checks
       Serial.println("Checking battery after 6 hours of standby...");
 
-      if (standby_battery_check()) {
-        // Battery critically low - shutdown complete, but just in case...
+      if (standby_battery_check_and_shutdown()) {
+        // Battery critically low - shutdown initiated by standby_battery_check_and_shutdown()
         while(1) { delay(1000); }  // Should never reach here after BATFET disconnect
       }
 
       // Battery OK after 6 hours - shutdown via full power off route (shipping mode)
       Serial.println("Battery OK after 6 hours, initiating full power off...");
       delay(500);
-      // Force full power off
-#if defined(LILYGO_AMOLED_1_75)
-      // Disconnect BATFET on LilyGo
-      Arduino_SY6970 pmu(IIC_Bus, SY6970_DEVICE_ADDRESS, DRIVEBUS_DEFAULT_VALUE, DRIVEBUS_DEFAULT_VALUE);
-      if (pmu.begin()) {
-        pmu.IIC_Write_Device_State(Arduino_IIC_Power::Device::POWER_BATFET_MODE,
-                                   Arduino_IIC_Power::Device_State::POWER_DEVICE_OFF);
-      }
-#elif defined(WAVESHARE_AMOLED_1_75)
-      // Shutdown on Waveshare
-      Wire.begin(IIC_SDA, IIC_SCL, 400000);
-      XPowersPMU pmu;
-      if (pmu.begin(Wire, AXP2101_SLAVE_ADDRESS, IIC_SDA, IIC_SCL)) {
-        pmu.shutdown();
-      }
-      Wire.end();
-#endif
+      // Perform full power off using BatteryHelper function
+      power_off();
       while(1) { delay(1000); }  // Infinite loop until power is cut
     }
 
