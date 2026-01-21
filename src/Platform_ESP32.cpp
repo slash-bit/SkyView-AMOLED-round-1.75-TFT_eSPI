@@ -64,9 +64,9 @@
 #define uS_TO_S_FACTOR 1000000ULL  /* Conversion factor for micro seconds to seconds */
 #define TIME_TO_SLEEP  28          /* Time ESP32 will go to sleep (in seconds) */
 
-// Battery check interval during standby (in hours)
-// Device wakes periodically to check battery and force shutdown if critically low
-#define STANDBY_BATTERY_CHECK_HOURS  2
+// Battery check timing during standby (in hours)
+// Device wakes ONE TIME after 6 hours to check battery and force shutdown if critically low
+#define STANDBY_BATTERY_CHECK_HOURS  6
 #define STANDBY_BATTERY_CHECK_US     (STANDBY_BATTERY_CHECK_HOURS * 3600ULL * uS_TO_S_FACTOR)
 
 // Forward declarations
@@ -209,7 +209,9 @@ QueueHandle_t audioQueue = NULL;
 void audioTask(void *parameter);
 #endif /* AUDIO */
 
-// RTC_DATA_ATTR int bootCount = 0;
+// RTC memory to track standby battery check state
+// Persists across deep sleep, but reset on power cycle
+RTC_DATA_ATTR bool standby_battery_check_done = false;
 
 static uint32_t ESP32_getFlashId()
 {
@@ -273,10 +275,15 @@ void ESP32_fini()
   esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
   esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, LOW);
 
-  // Enable periodic timer wake to check battery level during standby
-  // This prevents battery depletion by forcing full shutdown if battery gets critically low
-  esp_sleep_enable_timer_wakeup(STANDBY_BATTERY_CHECK_US);
-  Serial.printf("Standby battery check enabled: every %d hours\n", STANDBY_BATTERY_CHECK_HOURS);
+  // Enable ONE-TIME timer wake after 6 hours to check battery level during standby
+  // If battery is still OK after 6 hours, device will perform full power off (BATFET/shipping mode)
+  // This gives the device a reasonable standby period before being fully powered off
+  if (!standby_battery_check_done) {
+    esp_sleep_enable_timer_wakeup(STANDBY_BATTERY_CHECK_US);
+    Serial.printf("Standby battery check scheduled: %d hours until full power off\n", STANDBY_BATTERY_CHECK_HOURS);
+  } else {
+    Serial.println("Battery check already performed in this session, timer not rescheduled");
+  }
 
   // Close communication buses
   SPI.end();
@@ -296,7 +303,8 @@ void ESP32_fini()
   esp_deep_sleep_start();
 }
 
-// Minimal battery check during standby wake - returns true if should shutdown
+// Minimal battery check after 6-hour standby - returns true if battery critically low
+// If battery is low, device will be powered off via BATFET disconnect (shipping mode)
 static bool standby_battery_check()
 {
   // Initialize I2C for PMU communication (minimal init)
@@ -360,25 +368,47 @@ static void ESP32_setup()
 {
   pinMode(GPIO_NUM_0, INPUT);
 
-  // Check if wake was due to timer (periodic battery check during standby)
+  // Check if wake was due to timer (6-hour battery check during standby)
   if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER) {
     Serial.begin(38400);
-    Serial.println("\nTimer wake: checking battery...");
+    Serial.println("\nTimer wake (6-hour standby check)...");
 
-    if (standby_battery_check()) {
-      // Battery critically low - shutdown complete, but just in case...
-      while(1) { delay(1000); }  // Should never reach here after BATFET disconnect
+    // Only perform battery check if not already done during this standby period
+    if (!standby_battery_check_done) {
+      standby_battery_check_done = true;  // Mark as done to prevent repeated checks
+      Serial.println("Checking battery after 6 hours of standby...");
+
+      if (standby_battery_check()) {
+        // Battery critically low - shutdown complete, but just in case...
+        while(1) { delay(1000); }  // Should never reach here after BATFET disconnect
+      }
+
+      // Battery OK after 6 hours - shutdown via full power off route (shipping mode)
+      Serial.println("Battery OK after 6 hours, initiating full power off...");
+      delay(500);
+      // Force full power off
+#if defined(LILYGO_AMOLED_1_75)
+      // Disconnect BATFET on LilyGo
+      Arduino_SY6970 pmu(IIC_Bus, SY6970_DEVICE_ADDRESS, DRIVEBUS_DEFAULT_VALUE, DRIVEBUS_DEFAULT_VALUE);
+      if (pmu.begin()) {
+        pmu.IIC_Write_Device_State(Arduino_IIC_Power::Device::POWER_BATFET_MODE,
+                                   Arduino_IIC_Power::Device_State::POWER_DEVICE_OFF);
+      }
+#elif defined(WAVESHARE_AMOLED_1_75)
+      // Shutdown on Waveshare
+      Wire.begin(IIC_SDA, IIC_SCL, 400000);
+      XPowersPMU pmu;
+      if (pmu.begin(Wire, AXP2101_SLAVE_ADDRESS, IIC_SDA, IIC_SCL)) {
+        pmu.shutdown();
+      }
+      Wire.end();
+#endif
+      while(1) { delay(1000); }  // Infinite loop until power is cut
     }
 
-    // Battery OK - go back to sleep
-    Serial.println("Battery OK, returning to standby...");
-    delay(100);
-
-    gpio_hold_en(GPIO_NUM_0);
-    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
-    esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, LOW);
-    esp_sleep_enable_timer_wakeup(STANDBY_BATTERY_CHECK_US);
-    esp_deep_sleep_start();
+    // If we get here, check was already done - this shouldn't happen
+    Serial.println("Battery check already performed during this standby period, powering off...");
+    while(1) { delay(1000); }
   }
 
   //Check if the WAKE reason was button press
