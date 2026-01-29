@@ -17,6 +17,7 @@
  */
 
 #include <TimeLib.h>
+#include <string.h>
 
 #include "SoCHelper.h"
 #include "TrafficHelper.h"
@@ -70,12 +71,16 @@ void Traffic_Add()
                 float our_move = ThisAircraft.GroundSpeed * 0.5 /*MPS_PER_KNOT*/ * interval;
                 float x = fo.distance * sin_approx(fo.RelativeBearing)
                              - cip->distance * sin_approx(cip->RelativeBearing);
-                float y = our_move + fo.distance * cos_approx(fo.RelativeBearing) 
+                float y = our_move + fo.distance * cos_approx(fo.RelativeBearing)
                              - cip->distance * cos_approx(cip->RelativeBearing);
                 fo.Track = atan2_approx(y,x) + ThisAircraft.Track;
               }
             } else {
               // if PFLAU with no recent history, track remains unknown
+            }
+            // PFLAU doesn't contain protocol, so preserve it from previous packet
+            if (cip->protocol[0] != '\0') {
+              strncpy(fo.protocol, cip->protocol, sizeof(fo.protocol) - 1);
             }
           }
 

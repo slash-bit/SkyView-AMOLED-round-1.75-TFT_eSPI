@@ -65,6 +65,7 @@ typedef struct traffic_struct {
     uint8_t   callsign [GDL90_TRAFFICREPORT_MSG_CALLSIGN_SIZE];
 
     uint8_t   alert;              // bitmap of issued voice/tone/ble/... alerts
+    char      protocol[4];        // 3-char protocol identifier (FLR, FAN, ADB) + null terminator
 } traffic_t;
 
 typedef struct traffic_by_dist_struct {

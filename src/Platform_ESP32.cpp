@@ -64,10 +64,6 @@
 #define uS_TO_S_FACTOR 1000000ULL  /* Conversion factor for micro seconds to seconds */
 #define TIME_TO_SLEEP  28          /* Time ESP32 will go to sleep (in seconds) */
 
-// Battery check timing during standby (in hours)
-// Device wakes ONE TIME after 6 hours to check battery and force shutdown if critically low
-#define STANDBY_BATTERY_CHECK_HOURS  6
-#define STANDBY_BATTERY_CHECK_US     (STANDBY_BATTERY_CHECK_HOURS * 3600ULL * uS_TO_S_FACTOR)
 
 // Forward declarations
 static void ESP32_Button_setup();
@@ -209,9 +205,6 @@ QueueHandle_t audioQueue = NULL;
 void audioTask(void *parameter);
 #endif /* AUDIO */
 
-// RTC memory to track standby battery check state
-// Persists across deep sleep, but reset on power cycle
-RTC_DATA_ATTR bool standby_battery_check_done = false;
 
 static uint32_t ESP32_getFlashId()
 {
@@ -271,19 +264,12 @@ void ESP32_fini()
   // Configure GPIO0 BEFORE disabling wake sources
   gpio_hold_en(GPIO_NUM_0);
 
-  // Disable all wake sources, then enable GPIO0 button wake AND timer wake
+  // Disable all wake sources, then enable GPIO0 button wake only
   esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
   esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, LOW);
 
-  // Enable ONE-TIME timer wake after 6 hours to check battery level during standby
-  // If battery is still OK after 6 hours, device will perform full power off (BATFET/shipping mode)
-  // This gives the device a reasonable standby period before being fully powered off
-  if (!standby_battery_check_done) {
-    esp_sleep_enable_timer_wakeup(STANDBY_BATTERY_CHECK_US);
-    Serial.printf("Standby battery check scheduled: %d hours until full power off\n", STANDBY_BATTERY_CHECK_HOURS);
-  } else {
-    Serial.println("Battery check already performed in this session, timer not rescheduled");
-  }
+  // Note: Automatic 6-hour shutdown removed - use manual full power-off via button menu instead
+  Serial.println("Device entering standby - press button to wake or go to power menu for full shutdown");
 
   // Close communication buses
   SPI.end();
@@ -308,33 +294,6 @@ static void ESP32_setup()
 {
   pinMode(GPIO_NUM_0, INPUT);
 
-  // Check if wake was due to timer (6-hour battery check during standby)
-  if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER) {
-    Serial.begin(38400);
-    Serial.println("\nTimer wake (6-hour standby check)...");
-
-    // Only perform battery check if not already done during this standby period
-    if (!standby_battery_check_done) {
-      standby_battery_check_done = true;  // Mark as done to prevent repeated checks
-      Serial.println("Checking battery after 6 hours of standby...");
-
-      if (standby_battery_check_and_shutdown()) {
-        // Battery critically low - shutdown initiated by standby_battery_check_and_shutdown()
-        while(1) { delay(1000); }  // Should never reach here after BATFET disconnect
-      }
-
-      // Battery OK after 6 hours - shutdown via full power off route (shipping mode)
-      Serial.println("Battery OK after 6 hours, initiating full power off...");
-      delay(500);
-      // Perform full power off using BatteryHelper function
-      power_off();
-      while(1) { delay(1000); }  // Infinite loop until power is cut
-    }
-
-    // If we get here, check was already done - this shouldn't happen
-    Serial.println("Battery check already performed during this standby period, powering off...");
-    while(1) { delay(1000); }
-  }
 
   //Check if the WAKE reason was button press
   if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT0) {

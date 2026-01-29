@@ -37,16 +37,16 @@ OWNSHIP_ALT = 500.0  # meters MSL
 SPEED_KMH = 100.0  # km/h
 SPEED_MS = SPEED_KMH / 3.6  # 27.78 m/s
 CIRCLE_RADIUS = 100.0  # meters
-GLIDER_ID = "40AB21"
+GLIDER_ID = "40AB21!FLR_40AB21"
 AIRCRAFT_TYPE = 1  # Glider
 
 # Paraglider 1 (South-West, sinking)
-PG1_ID = "A1B2C3"
+PG1_ID = "A1B2C3!FAN_A1B2C3"
 PG1_SPEED_KMH = 40.0  # km/h
 PG1_SPEED_MS = PG1_SPEED_KMH / 3.6  # 11.11 m/s
 
 # Paraglider 2 (North-West, circling)
-PG2_ID = "D4E5F6"
+PG2_ID = "D4E5F6!FAN_D4E5F6"
 PG2_SPEED_KMH = 35.0  # km/h
 PG2_SPEED_MS = PG2_SPEED_KMH / 3.6  # 9.72 m/s
 PG2_CIRCLE_RADIUS = 50.0  # meters
@@ -56,6 +56,7 @@ PHASE1_APPROACH_DURATION = 60  # Short approach
 PHASE2_TURN_DURATION = 10  # Quick turn
 PHASE3_CIRCLE_DURATION = 2 * 20  # 2 circles (shorter demo)
 PHASE4_DEPARTURE_MAX_DURATION = 120  # 2 minutes with paragliders (ends after 120 seconds)
+PHASE5_FULL_TURN_DURATION = 20  # Full 360° turn in 20 seconds, climbing at 2 m/s
 
 def lat_lon_to_nmea(lat, lon):
     """Convert decimal degrees to NMEA format (DDMM.MMMM)"""
@@ -261,6 +262,33 @@ def generate_demo_file():
         lines.extend(generate_frame_multi(timestamp, aircraft_list))
         timestamp += 1
 
+    # Phase 5: Full 360° turn while climbing at 2 m/s
+    print("Phase 5: Full 360° turn while climbing...")
+    turn_center_north = north_pos
+    turn_center_east = east_pos
+    phase5_start_altitude = altitude
+
+    # Angular velocity for full circle in 20 seconds: 360° = 2π radians
+    # 2π radians / 20 seconds = π/10 rad/s
+    phase5_angular_velocity = 2 * math.pi / PHASE5_FULL_TURN_DURATION
+
+    for i in range(PHASE5_FULL_TURN_DURATION):
+        # Calculate heading for full 360° turn (start from current heading, e.g., 90°)
+        angle_rad = (90 * math.pi / 180) + (phase5_angular_velocity * i)
+        heading = int((angle_rad * 180 / math.pi) % 360)
+
+        # Keep position fixed at turn center (hovering during turn, or tight circle)
+        # For a tight circle at current speed, we'll calculate with a very small radius
+        # OR keep it at the center for a hover-like turn
+        north_pos = turn_center_north + CIRCLE_RADIUS * 0.2 * math.cos(angle_rad)  # Small radius for visual effect
+        east_pos = turn_center_east + CIRCLE_RADIUS * 0.2 * math.sin(angle_rad)
+
+        # Climb at constant 2 m/s
+        altitude = phase5_start_altitude + (2.0 * i)
+
+        lines.extend(generate_frame(timestamp, north_pos, east_pos, altitude, heading, 2.0))
+        timestamp += 1
+
     # Add ending sentences (no traffic)
     print("Adding ending...")
     for _ in range(4):
@@ -291,7 +319,7 @@ def generate_frame_multi(timestamp, aircraft_list):
     lines.append(create_nmea_sentence(gpgga))
 
     # GPRMC - Recommended Minimum Specific GPS/TRANSIT Data (ownship)
-    gprmc = f"$GPRMC,{time_str},A,{lat_str},{lat_dir},{lon_str},{lon_dir},0.0,0.0,250504,,,"
+    gprmc = f"$GPRMC,{time_str},A,{lat_str},{lat_dir},{lon_str},{lon_dir},16.7,0.0,250504,,,"
     lines.append(create_nmea_sentence(gprmc) + "A")  # Mode indicator A = Autonomous
 
     # GPGSA - GPS DOP and Active Satellites
@@ -384,6 +412,7 @@ print(f"    - Phase 1: Approach from 5km North, descending -3 m/s")
 print(f"    - Phase 2: Turn 90° right (East)")
 print(f"    - Phase 3: Circle {CIRCLE_RADIUS}m radius, climbing 3-5 m/s")
 print(f"    - Phase 4: Fly away to 10km")
+print(f"    - Phase 5: Full 360° turn in {PHASE5_FULL_TURN_DURATION}s, climbing at 2.0 m/s")
 print(f"\n  Paragliders (appear when glider at 2km):")
 print(f"    - PG1 ID: {PG1_ID}, 500m SW, +50m altitude, sinking -1.1 m/s")
 print(f"    - PG2 ID: {PG2_ID}, 600m NE, -750m altitude, circling & climbing to 2000m")

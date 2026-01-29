@@ -60,6 +60,22 @@ static unsigned long NMEA_TimeMarker = 0;
 // static unsigned long lastGGA = 0;
 boolean TFTrefresh = false;
 
+static void extract_protocol_from_id(const char *id_str, char *protocol)
+{
+    // Extract 3 characters after '!' from ID string
+    // Format: "201076!FAN_201" or "201076!FLR_201" or "201076!ADB_201"
+    const char *exclaim_pos = strchr(id_str, '!');
+    if (exclaim_pos != NULL && exclaim_pos[1] != '\0') {
+        // Copy 3 characters after '!'
+        protocol[0] = exclaim_pos[1];
+        protocol[1] = (exclaim_pos[2] != '\0') ? exclaim_pos[2] : '\0';
+        protocol[2] = (exclaim_pos[3] != '\0') ? exclaim_pos[3] : '\0';
+        protocol[3] = '\0';
+    } else {
+        protocol[0] = '\0';
+    }
+}
+
 static void NMEA_Parse_Character(char c)
 {
     static uint32_t old_id;
@@ -89,7 +105,11 @@ static void NMEA_Parse_Character(char c)
       if (T_ID.isUpdated()) {
         fo = EmptyFO;
 
-       Serial.print(F(" ID=")); Serial.print(T_ID.value());
+      //  Serial.print(F(" T_ID=")); Serial.println(T_ID.value());
+
+        // Extract protocol (FLR, FAN, ADB, etc.) from T_ID value
+        extract_protocol_from_id(T_ID.value(), fo.protocol);
+        // Serial.print(F("T Protocol=")); Serial.println(fo.protocol);
 
         fo.ID = strtol(T_ID.value(), NULL, 16);
 
@@ -244,8 +264,9 @@ static void NMEA_Parse_Character(char c)
 //          Serial.print(F(" ID=")); Serial.print(S_ID.value());
           NMEA_Status.ID = strtol(S_ID.value(), NULL, 16);
           fo.ID = NMEA_Status.ID;
+          // Note: PFLAU S_ID doesn't contain protocol, it will be preserved from PFLAA
 #if 0
-          Serial.print(F(" ID="));
+          Serial.print(F(" S_ID="));
           Serial.print((NMEA_Status.ID >> 16) & 0xFF, HEX);
           Serial.print((NMEA_Status.ID >>  8) & 0xFF, HEX);
           Serial.print((NMEA_Status.ID      ) & 0xFF, HEX);

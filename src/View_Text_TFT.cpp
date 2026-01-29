@@ -180,6 +180,25 @@ void toggleRssiDisplay() {
   TFTTimeMarker = 0; // Force update of the display
 }
 
+// Convert short protocol code to full protocol name
+static const char* getProtocolName(const char* shortCode) {
+  if (shortCode == NULL || shortCode[0] == '\0') return ""; // Empty protocol
+
+  // Check first 3 characters for common protocols
+  if (shortCode[0] == 'F' && shortCode[1] == 'L' && shortCode[2] == 'R') {
+    return "FLARM";
+  } else if (shortCode[0] == 'F' && shortCode[1] == 'A' && shortCode[2] == 'N') {
+    return "FANET";
+  } else if (shortCode[0] == 'A' && shortCode[1] == 'D' && shortCode[2] == 'L') {
+    return "ADS-L";
+  } else if (shortCode[0] == 'A' && shortCode[1] == 'D' && shortCode[2] == 'B') {
+    return "ADS-B";
+  } else if (shortCode[0] == 'P' && shortCode[1] == 'A' && shortCode[2] == 'W') {
+    return "PAware";
+  }
+  return shortCode; // Default: return as-is
+}
+
 static void draw_radioSignal(int rssi, int lastseen) {
   // Get position from elements array
   int16_t radio_x = elements[ELEM_RADIO_SIGNAL].x;
@@ -268,6 +287,10 @@ void TFT_draw_text() {
   char id2_text  [TEXT_VIEW_LINE_LENGTH];
   lock_color = TFT_LIGHTGREY;
   bool isFocused = false;
+
+  // Toggle between protocol name and hex ID on each call
+  static bool showProtocol = true;
+  showProtocol = !showProtocol;
   for (int i=0; i < MAX_TRACKING_OBJECTS; i++) {
     if (Container[i].ID && (now() - Container[i].timestamp) <= ENTRY_EXPIRATION_TIME) {
 
@@ -316,8 +339,16 @@ void TFT_draw_text() {
     pages = j;
     // Serial.printf("TFT_current: %d, pages: %d\n", TFT_current, pages);
     // snprintf(id2_text, sizeof(id_text), "%02X%02X%02X", (traffic[TFT_current - 1].fop->ID >> 16) & 0xFF, (traffic[TFT_current - 1].fop->ID >> 8) & 0xFF, (traffic[TFT_current - 1].fop->ID) & 0xFF);      // Extract low byte
-    snprintf(id2_text, sizeof(id2_text), "ID: %02X%02X%02X", (traffic[TFT_current - 1].fop->ID >> 16) & 0xFF, (traffic[TFT_current - 1].fop->ID >> 8) & 0xFF, (traffic[TFT_current - 1].fop->ID) & 0xFF);      // Extract low byte
-   
+    // Format hex ID only
+    snprintf(id2_text, sizeof(id2_text), "%02X%02X%02X",
+             (traffic[TFT_current - 1].fop->ID >> 16) & 0xFF,
+             (traffic[TFT_current - 1].fop->ID >> 8) & 0xFF,
+             (traffic[TFT_current - 1].fop->ID) & 0xFF);      // Extract low byte
+
+    // Create id1_text as just the hex ID (same as id2_text for fallback use)
+    char id1_text[20];
+    strncpy(id1_text, id2_text, sizeof(id1_text) - 1);
+    id1_text[sizeof(id1_text) - 1] = '\0';
     if (TFT_current > j) {
       TFT_current = j;
     
@@ -345,13 +376,13 @@ void TFT_draw_text() {
           buddy_name = db_label;
           bud_color = TFT_CYAN;
         } else {
-          buddy_name = id2_text;
+          buddy_name = id1_text;
         }
       } else {
-        buddy_name = id2_text;
+        buddy_name = id1_text;
       }
 #else
-      buddy_name = id2_text;
+      buddy_name = id1_text;
 #endif
     }
     
@@ -416,9 +447,18 @@ void TFT_draw_text() {
   bearingSprite.setPivot(39, 27);
   bearingSprite.pushRotated(&sprite, bearing - 90);
 
-  // ===== Draw ID string =====
+  // ===== Draw ID string - alternates between protocol name and hex ID =====
   sprite.setTextColor(lock_color, TFT_BLACK);
-  sprite.drawString(id2_text, elements[ELEM_ID_STRING].x, elements[ELEM_ID_STRING].y, 4);
+  char id_display[32];
+
+  if (showProtocol && traffic[TFT_current - 1].fop->protocol[0] != '\0') {
+    // Show protocol name if available
+    snprintf(id_display, sizeof(id_display), "%s", getProtocolName(traffic[TFT_current - 1].fop->protocol));
+  } else {
+    // Show hex ID
+    snprintf(id_display, sizeof(id_display), "%s", id2_text);
+  }
+  sprite.drawString(id_display, elements[ELEM_ID_STRING].x, elements[ELEM_ID_STRING].y, 4);
 
   // ===== Draw Traffic Type (Icon type) =====
   uint8_t acft_type = traffic[TFT_current - 1].acftType;

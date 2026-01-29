@@ -24,14 +24,14 @@
 
 ## Introduction
 
-SkyView is a traffic awareness device for aviation that displays air traffic data received from EC radio devices (like SoftRF SenseCap Card) and visualizes FLARM NMEA or Garmin GDL90 data on round AMOLED displays.
+SkyView is a traffic awareness device for aviation that displays air traffic data received from EC radio devices (like SoftRF SenseCap T1000-E Card) and visualizes FLARM NMEA or Garmin GDL90 data on round AMOLED displays.
 
 **Compatible Hardware:**
 - LILYGO AMOLED 1.75" T-Display
 - Waveshare AMOLED 1.75" H0175Y003AM display
 
 **Compatible Traffic Sources:**
-- SoftRF SenseCap T100-E (via Bluetooth LE)
+- SoftRF SenseCap T1000-E (via Bluetooth LE)
 - XC Tracer (via Bluetooth LE)
 - FLARM POwerMouse (via NMEA over WiFi/Serial)
 - SkyEcho
@@ -44,9 +44,10 @@ SkyView is a traffic awareness device for aviation that displays air traffic dat
 
 1. **Power On Your Device**
    - Long press (>2 seconds) the Mode/Power button to turn on SkyView.
+   - When device is in "Storage Sleep" mode, it requires plugging USB-C charger to wake up.
    - The device will boot up and display the Radar screen.
 
-2. **Connect Your Traffic Source**
+2. **Connect Your Traffic Source** >>Important. 
    - For Bluetooth devices: Follow the [Bluetooth LE Management](#bluetooth-le-management) section to pair your SoftRF or other FLARM/FANET device.
    - For WiFi/Serial connections: Configure connection settings via the web interface.
 
@@ -72,6 +73,11 @@ SkyView offers three main display screens that you can cycle through using the M
 ![Mode Button Screen Navigation](images/SkyView_Mode_button.gif)
 
 ---
+## Traffic Info screen
+
+![Traffic Info screen](images/Info-screen-explained-small.png)
+
+---
 
 ## Features
 
@@ -84,7 +90,7 @@ Identify known pilots easily on the Radar Screen. Buddies are displayed with spe
 - **Initials** displayed next to the aircraft symbol
 - **Circle (dot) icon** marking buddy aircraft
 
-![Buddy Display](images/Buddy_initials.gif)
+![Buddy Display](images/Buddy_initials.png)
 
 **Managing Buddy Labels:**
 - Buddy labels can be enabled or disabled from the on-screen Settings Page
@@ -103,7 +109,7 @@ Get enhanced situational awareness with vertical separation information displaye
   - **Green** - Aircraft is below you
   - **Red** - Aircraft at same height (±500ft)
 
-![Vertical Separation](images/SkyView_vertical_sep_resized.jpg)
+![Vertical Separation](images/SkyView_vertical_sep_resized.png)
 
 > **Note:** Paragliders use color coding instead of numeric altitude display.
 
@@ -118,7 +124,7 @@ Stay alert to nearby traffic with visual proximity warnings that help you mainta
 - **Look-up direction line** drawn from Radar center to the aircraft
 - Visual warnings help you quickly locate traffic in your vicinity
 
-![Proximity Alerting](images/SkyView-proximity_alerting.gif)
+![Proximity Alerting](images/SkyView-proximity_alerting.png)
 
 ---
 
@@ -136,12 +142,13 @@ Interactive touch functionality allows you to focus on specific aircraft and vie
 ![Tap on Target](images/SkyView-TapOntarget.gif)
 
 **Lock Feature:**
-- Click anywhere around the aircraft ID to lock the Info page
-- Green lock icon appears when locked
-- Info shown only for locked aircraft (as long as data is being received)
-- Tap lock icon to return to unlocked mode
 
-![Info Lock](images/SkyView-lock_s.jpg)
+- When green , is indicating that the Info page will always switch to this aircraft (if in range)
+- When airctaft out of range, screen will flip to any other visible aircraft or "No Traffic" message
+- When airctaft is back, the screen will automaticall switch back to the locked aircraft
+- To chnage the locked aircraft, swipe up or down to chnage to next page, it will lock on to next aircraft
+
+![Info Lock](images/SkyView-Info-page.png)
 
 ---
 
@@ -166,13 +173,8 @@ Advanced battery management system with improved charging and monitoring capabil
    - Track how long battery lasted from full to low
    - Battery logs retrievable via web interface for analysis
 
-![Battery Display](images/SkyView-battery-image.jpg)
+![Battery Display](images/SkyView-battery-image.png)
 
-**Power Efficiency:**
-- NimBLE Bluetooth stack for reduced power consumption
-- Optimized BLE scanning and connection management
-
----
 
 ## Device Controls
 
@@ -183,16 +185,31 @@ The Mode/Power button provides essential device control functions.
 **Power Controls:**
 - **Power On:** Long press (>2 seconds) while device is in sleep mode
   - Device will not accidentally power on with momentary button presses
-- **Power Off:** Long press while device is on
-  - Device enters deep sleep mode
 
-**Screen Navigation:**
-- **Short press:** Cycle through screens in order
-  - With Compass enabled: Radar → Traffic Info → Compass → Radar
-  - With Compass disabled: Radar ⇄ Traffic Info
+**Power Down Options:**
+- Hold button for 2 seconds it will bring power down options
+- **Sleep Mode:** Puts device into low-power sleep, can be woken by button
+- **Storage Sleep:** Deep sleep mode, requires USB power to wake
+> **Note:** Use Full Shutdown when keeping it powered off for longer than a day
 
-![Mode Button Functions](images/SkyView_Mode_button.gif)
+![PowerDown Options](images/SkyView-powerdown-options.png)
+---
 
+
+
+---
+## Compass page
+
+**GPS based Comapss**
+
+- Shows Heading track
+- Altitude
+- Speed
+- Number of satellites received
+
+![Compass Page](images/SkyView-Compas.png)
+
+> Note: you must be moving for compass to update
 ---
 
 ## Bluetooth LE Management
@@ -315,17 +332,28 @@ Keep your SkyView up to date with the latest features and improvements.
 
 ---
 
-## Settings
+## Settings pages
 
-Access on-device settings by navigating to the Settings page (swipe or use touchscreen controls).
+Access on-device settings by navigating to the Settings page 
+![Settings Cogs](images/SkyView-seetings-cogs.png)
+(from Info page > tap cogs icon).
+
+
+![Settings Page 1](images/SkyView-settings-1.png)
 
 **Available Settings:**
-- **Buddy Labels** - Enable/disable buddy name display on Radar
-- **Compass Page** - Enable/disable Compass screen in rotation
-- **Display Brightness** - Adjust screen brightness
-- **Orientation Mode** - North-Up or Track-Up radar orientation
+
 - **Traffic Filters** - Filter aircraft types to display
-- **Power Management** - Configure sleep and timeout settings
+- **Show thermals** - Showes coloured dots when paraglider climbing
+- **Radar North Up** - North-Up or Track-Up radar orientation
+- **Show Labels** - Enable/disable showing buddy initials on Radar page
+
+![Settings Page 2](images/SkyView-settings-2.png)
+
+
+- **Compass Page** - Enable/disable Compass screen in rotation
+- **Voice Alerts** - Enable/disable Traffic announcements ( in Audio enabled device)
+- **Power Options** - Brings [Power Options Menu](#modepower-button) ( the same as long button press)
 
 **Navigation:**
 - Swipe up/down to scroll through settings
