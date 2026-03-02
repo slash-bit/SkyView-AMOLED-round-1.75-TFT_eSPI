@@ -1114,6 +1114,7 @@ void handleInput() {
       settings->adapter = server.arg(i).toInt();
     } else if (server.argName(i).equals("connection")) {
       settings->connection = server.arg(i).toInt();
+      settings->demo_mode = (settings->connection == CON_DEMO_FILE);
     } else if (server.argName(i).equals("bridge")) {
       settings->bridge = server.arg(i).toInt();
     } else if (server.argName(i).equals("protocol")) {

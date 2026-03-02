@@ -42,8 +42,13 @@
 #endif /* AMOLED */
 
 /* Peripherals */
+#if defined(AMOLED)
+#define SOC_GPIO_PIN_GNSS_RX  44
+#define SOC_GPIO_PIN_GNSS_TX  43
+#else
 #define SOC_GPIO_PIN_GNSS_RX  36
 #define SOC_GPIO_PIN_GNSS_TX  6
+#endif
 
 #if defined(TFT_ST7789)
 /* ESP32 and ST7789 SPI pins mapping */
