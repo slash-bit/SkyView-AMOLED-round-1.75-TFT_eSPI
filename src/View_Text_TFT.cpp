@@ -291,6 +291,10 @@ void TFT_draw_text() {
   // Toggle between protocol name and hex ID on each call
   static bool showProtocol = true;
   showProtocol = !showProtocol;
+    // Toggle between protocol name and hex ID on each call
+  static bool showLevel = true;
+  showLevel = !showLevel;
+
   for (int i=0; i < MAX_TRACKING_OBJECTS; i++) {
     if (Container[i].ID && (now() - Container[i].timestamp) <= ENTRY_EXPIRATION_TIME) {
 
@@ -491,7 +495,7 @@ void TFT_draw_text() {
   // ===== Draw Radio Signal Icon (replaces Last Seen and progress bar) =====
   draw_radioSignal(traffic[TFT_current - 1].rssi, traffic[TFT_current - 1].lastSeen);
 
-  // ===== Draw Vertical speed (left side) =====
+  // ===== Draw Vertical separation (left side) =====
   sprite.setTextDatum(TL_DATUM);
   sprite.setTextColor(TFT_WHITE, TFT_BLACK);
   sprite.drawNumber((int)(traffic[TFT_current - 1].fop->RelativeVertical) * alt_mult, elements[ELEM_VERTICAL].x, elements[ELEM_VERTICAL].y, 7);
@@ -524,7 +528,7 @@ void TFT_draw_text() {
   sprite.drawFloat((traffic[TFT_current - 1].fop->distance / 1000.0), 1, elements[ELEM_DISTANCE].x, elements[ELEM_DISTANCE].y, 7);
   sprite.drawString("km", 285, 300, 4);
     
-  // ===== Draw vertical speed arc indicators =====
+  // ===== Draw vertical separation arc indicators (left side)=====
   if (vertical > 55) {
     sprite.drawSmoothArc(233, 233, 230, 225, 90, constrain(90 + vertical / 10, 90, 150), vertical > 150 ? TFT_CYAN : TFT_RED, TFT_BLACK, true);
     sprite.drawString("+", 15, 226, 7);
@@ -534,7 +538,9 @@ void TFT_draw_text() {
   else if (vertical < -55) {
     sprite.drawSmoothArc(233, 233, 230, 225, constrain(90 - abs(vertical) / 10, 30, 90), 90, vertical < -150 ? TFT_GREEN : TFT_RED, TFT_BLACK, true);
   }
-
+  else  { //small separation - blink red bar
+    sprite.drawSmoothArc(233, 233, 230, 225, 84, 96, showLevel ? TFT_RED : TFT_DARKGREY, TFT_BLACK, true);
+  }
   // ===== Draw climbrate arc indicators =====
   if (traffic_vario < -0.5) {
     sprite.drawSmoothArc(233, 233, 230, 225, 270, constrain(270 + abs(traffic_vario) * 12, 270, 360), traffic_vario < 2.5 ? TFT_BLUE : traffic_vario < 1 ? TFT_CYAN : TFT_GREEN, TFT_BLACK, true);
