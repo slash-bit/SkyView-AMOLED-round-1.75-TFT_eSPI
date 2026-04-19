@@ -218,7 +218,7 @@ void TFT_setup(void) {
   if (spiMutex == NULL) {
       Serial.println("Failed to create SPI mutex!");
   }
-  lcd_setRotation(0); //adjust #define display_column_offset for different rotations
+  lcd_setRotation(settings->rotation);
   lcd_brightness(0); // 0-255    
 
   Serial.printf("Free heap: %d bytes\n", esp_get_free_heap_size());
