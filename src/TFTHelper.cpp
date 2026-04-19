@@ -474,44 +474,34 @@ void settings_page_1() {
     sprite.setCursor(160, 40);
     sprite.printf("Settings");
 
-    text_y = 140; //bottom of the text
+    text_y = 100;
     sprite.setCursor(button_x - 300, text_y);
-    sprite.printf("Traffic filter 500m");
-    if ( settings->filter  == TRAFFIC_FILTER_500M) {
-      settings_button(button_x, text_y, true);
-    } else {
-      settings_button(button_x, text_y, false); 
-    }
+    sprite.printf("Alt Filter: %s",
+      settings->filter == TRAFFIC_FILTER_OFF    ? "OFF" :
+      settings->filter == TRAFFIC_FILTER_500M   ? "500m" :
+      settings->filter == TRAFFIC_FILTER_1000M  ? "1000m" :
+      settings->filter == TRAFFIC_FILTER_3500FT ? "3500ft" :
+      settings->filter == TRAFFIC_FILTER_5000FT ? "5000ft" : "OFF");
 
-    text_y = 200;
+    text_y = 155;
     sprite.setCursor(button_x - 300, text_y);
     sprite.printf("Show Thermals");
-    if (settings->show_thermals) {
-      settings_button(button_x, text_y, true);
-    } else {
-      settings_button(button_x, text_y, false);
-    }
-    
-    text_y = 260;
+    settings_button(button_x, text_y, settings->show_thermals);
+
+    text_y = 210;
     sprite.setCursor(button_x - 300, text_y);
     sprite.printf("Radar North Up");
-    if (settings->orientation == DIRECTION_NORTH_UP) {
-      settings_button(button_x, text_y, true);
-    } else {
-      settings_button(button_x, text_y, false); 
-    }
+    settings_button(button_x, text_y, settings->orientation == DIRECTION_NORTH_UP);
+
+    text_y = 265;
+    sprite.setCursor(button_x - 300, text_y);
+    sprite.printf("Show Labels");
+    settings_button(button_x, text_y, isLabels);
 
     text_y = 320;
     sprite.setCursor(button_x - 300, text_y);
-    sprite.printf("Show Labels");
-
-    if (isLabels) {
-      settings_button(button_x, text_y, true);
-
-    } else {
-      settings_button(button_x, text_y, false);
-
-    }
+    sprite.printf("Arrowhead Icons");
+    settings_button(button_x, text_y, settings->icon_style == ICON_STYLE_ARROWHEAD);
 
 
     // Page indicator
@@ -552,38 +542,26 @@ void settings_page_2() {
     sprite.setCursor(160, 40);
     sprite.printf("Settings");
 
-    text_y = 140;
+    text_y = 100;
     sprite.setCursor(button_x - 300, text_y);
     sprite.printf("Compass Page");
-    if (settings->compass) {
-      settings_button(button_x, text_y, true);
-    } else {
-      settings_button(button_x, text_y, false);
-    }
+    settings_button(button_x, text_y, settings->compass);
 
-    text_y = 200;
+    text_y = 155;
     sprite.setCursor(button_x - 300, text_y);
     sprite.printf("Voice Alerts");
-    if (settings->voice_alerts) {
-      settings_button(button_x, text_y, true);
-    } else {
-      settings_button(button_x, text_y, false);
-    }
+    settings_button(button_x, text_y, settings->voice_alerts);
 
-    text_y = 260;
+    text_y = 210;
     sprite.setCursor(button_x - 300, text_y);
     sprite.printf("Demo Mode");
-    if (settings->demo_mode) {
-      settings_button(button_x, text_y, true);
-    } else {
-      settings_button(button_x, text_y, false);
-    }
+    settings_button(button_x, text_y, settings->demo_mode);
 
-    text_y = 340;
-    sprite.setCursor(button_x - 240, 320);
+    text_y = 265;
+    sprite.setCursor(button_x - 240, 250);
     sprite.printf("Power Options");
     sprite.setSwapBytes(true);
-    sprite.pushImage(button_x, 290, 48, 47, power_button_small);
+    sprite.pushImage(button_x, 240, 48, 47, power_button_small);
 
     // Page indicator
     sprite.setTextColor(TFT_DARKGREY, TFT_BLACK);

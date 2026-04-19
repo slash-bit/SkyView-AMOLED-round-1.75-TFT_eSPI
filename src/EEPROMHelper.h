@@ -60,7 +60,7 @@ typedef struct Settings {
     uint32_t team;
 
     uint8_t  resvd3;
-    uint8_t  resvd4;
+    uint8_t  icon_style;
     uint8_t  resvd5;
     uint8_t  resvd6;
     uint8_t  resvd7;

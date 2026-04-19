@@ -438,10 +438,15 @@ static void TFT_Draw_Radar()
         x = radar_x + radar_w / 2 + radius - tbw / 2;
         y = radar_y + radar_w / 2;
         sprite.drawString("R", x, y, 4);
-        if (settings->filter == TRAFFIC_FILTER_500M) {
+        if (settings->filter != TRAFFIC_FILTER_OFF) {
           x = radar_x + radar_w / 2;
-          y = radar_y + radar_w / 2 + radius - tbh / 2; 
-          sprite.drawString("500", x, y, 4);
+          y = radar_y + radar_w / 2 + radius - tbh / 2;
+          const char *filt_str =
+            settings->filter == TRAFFIC_FILTER_500M   ? "500m" :
+            settings->filter == TRAFFIC_FILTER_1000M  ? "1km" :
+            settings->filter == TRAFFIC_FILTER_3500FT ? "3.5k'" :
+            settings->filter == TRAFFIC_FILTER_5000FT ? "5k'" : "";
+          sprite.drawString(filt_str, x, y, 4);
         }
         // Draw crosshair in radar center
         sprite.drawLine(radar_center_x - 10, radar_center_y, radar_center_x + 10, radar_center_y, TFT_GREEN);
@@ -587,258 +592,161 @@ static void TFT_Draw_Radar()
         Serial.println("Debug | ");
         // Serial.flush();
 #endif
-        switch (Container[i].AcftType)
+        if (settings->icon_style == ICON_STYLE_ARROWHEAD)
         {
-          case 1: //Glider
-            if (!gliderSprite.created()) {
-              gliderSprite.createSprite(70, 62);
-              gliderSprite.fillSprite(TFT_BLACK);
-              gliderSprite.setSwapBytes(true);
-              gliderSprite.pushImage(0, 0, 70, 62, glider);
-              gliderSprite.setPivot(35, 31);
-                }
-            sprite.setPivot(radar_center_x + x, radar_center_y - y);
-            gliderSprite.pushRotated(&sprite, rel_heading, TFT_BLACK);
-            if (isLabels) {
-              if (!altSprite.created()) {
-                altSprite.createSprite(84, 26); // Adjust size as needed
-                altSprite.fillSprite(TFT_BLACK);
-                altSprite.setTextColor(TFT_WHITE, TFT_BLACK);
-                altSprite.setTextDatum(MC_DATUM); // Center text
-                altSprite.setPivot(42, 13); // Center pivot of Initail text
-              }
-                // Clear the label sprite for each frame
-                altSprite.fillSprite(TFT_BLACK);
-                altSprite.setTextColor(TFT_WHITE, TFT_BLACK);
-                altSprite.setTextDatum(MC_DATUM); // Center text
-                altSprite.drawString(rel_vertical_str, 42, 13, 4);
-                // sprite.setPivot(radar_center_x + x + 35, radar_center_y - y - 13); //set text slighly away from center
-                altSprite.pushToSprite(&sprite, radar_center_x + x + 35, radar_center_y - y - 13, TFT_BLACK); //ThisAircraft.Track is for Rotatiin back to horisontal
-                 }
-            //show thermal dot if climbing
-            if (settings->show_thermals && Container[i].ClimbRate >= 1.5) {
-              pgSprite.fillCircle(sprite_center_x, sprite_center_y, 7, climbColor);
+            if (!arrowSprite.created())
+            {
+              arrowSprite.createSprite(36, 36);
+              arrowSprite.setColorDepth(16);
+              arrowSprite.setPivot(18, 18);
             }
-            if (Container[i].RelativeVertical < 500  && Container[i].distance < 2000) {
-              if (blink) {
-                sprite.drawSmoothCircle(radar_center_x + x, radar_center_y - y, 10, color, TFT_BLACK);
-                sprite.drawSmoothCircle(radar_center_x + x, radar_center_y - y, 20, color, TFT_BLACK);
-                sprite.drawLine(radar_center_x, radar_center_y, radar_center_x + x, radar_center_y - y, color);
-              }
-            }
-              break;
+            arrowSprite.fillSprite(TFT_BLACK);
+            arrowSprite.fillTriangle(4, 31, 18, 3, 32, 31, color);
+            arrowSprite.fillTriangle(11, 31, 18, 20, 25, 31, TFT_BLACK);
 
-          case 3: // Helicopter
-            if (!helicopterSprite.created()) {
-              helicopterSprite.createSprite(48, 64);
-              helicopterSprite.fillSprite(TFT_BLACK);
-              helicopterSprite.setSwapBytes(true);
-              helicopterSprite.pushImage(0, 0, 48, 64, helicopter);
-              helicopterSprite.setPivot(24, 32);
-              }
-            sprite.setPivot(radar_center_x + x, radar_center_y - y);
-            helicopterSprite.pushRotated(&sprite, rel_heading, TFT_BLACK);
-            if (isLabels) {
-              if (!altSprite.created()) {
-                altSprite.createSprite(84, 26); // Adjust size as needed
-                altSprite.fillSprite(TFT_BLACK);
-                altSprite.setTextColor(TFT_WHITE, TFT_BLACK);
-                altSprite.setTextDatum(MC_DATUM); // Center text
-                altSprite.setPivot(42, 13); // Center pivot of Initail text
-              }
-                // Clear the label sprite for each frame
-                altSprite.fillSprite(TFT_BLACK);
-                altSprite.setTextColor(TFT_WHITE, TFT_BLACK);
-                altSprite.setTextDatum(MC_DATUM); // Center text
-                altSprite.drawString(rel_vertical_str, 42, 13, 4);
-                // sprite.setPivot(radar_center_x + x + 35, radar_center_y - y - 13); //set text slighly away from center
-                altSprite.pushToSprite(&sprite, radar_center_x + x + 35, radar_center_y - y - 13, TFT_BLACK); //ThisAircraft.Track is for Rotatiin back to horisontal
-                 }
-            if (Container[i].RelativeVertical < 500 && Container[i].distance < 3000) {
-              if (blink) {
-                sprite.drawSmoothCircle(radar_center_x + x, radar_center_y - y, 10, color, TFT_BLACK);
-                sprite.drawSmoothCircle(radar_center_x + x, radar_center_y - y, 20, color, TFT_BLACK);
-                sprite.drawLine(radar_center_x, radar_center_y, radar_center_x + x, radar_center_y - y, color);
-              }
+            String initials = BuddyManager::getBuddyInitials(Container[i].ID);
+            bool isBuddy = (initials != "  ");
+            if (isBuddy)
+            {
+              if (blink)
+                arrowSprite.fillCircle(18, 14, 5, TFT_WHITE);
+              else
+                arrowSprite.fillCircle(18, 14, 5, TFT_YELLOW);
             }
-            break;
-          case 6: //hang glider
+
+            sprite.setPivot(radar_center_x + x, radar_center_y - y);
+            arrowSprite.pushRotated(&sprite, rel_heading, TFT_BLACK);
+        }
+        else
+        {
+          switch (Container[i].AcftType)
           {
-            if (!hgSprite.created()) {
-              hgSprite.createSprite(44, 44);
+            case 1:
+              if (!gliderSprite.created()) {
+                gliderSprite.createSprite(70, 62);
+                gliderSprite.fillSprite(TFT_BLACK);
+                gliderSprite.setSwapBytes(true);
+                gliderSprite.pushImage(0, 0, 70, 62, glider);
+                gliderSprite.setPivot(35, 31);
+              }
+              sprite.setPivot(radar_center_x + x, radar_center_y - y);
+              gliderSprite.pushRotated(&sprite, rel_heading, TFT_BLACK);
+              break;
+            case 3:
+              if (!helicopterSprite.created()) {
+                helicopterSprite.createSprite(48, 64);
+                helicopterSprite.fillSprite(TFT_BLACK);
+                helicopterSprite.setSwapBytes(true);
+                helicopterSprite.pushImage(0, 0, 48, 64, helicopter);
+                helicopterSprite.setPivot(24, 32);
+              }
+              sprite.setPivot(radar_center_x + x, radar_center_y - y);
+              helicopterSprite.pushRotated(&sprite, rel_heading, TFT_BLACK);
+              break;
+            case 6:
+              if (!hgSprite.created()) {
+                hgSprite.createSprite(44, 44);
+                hgSprite.fillSprite(TFT_BLACK);
+                hgSprite.setSwapBytes(true);
+                hgSprite.setPivot(22, 22);
+              }
               hgSprite.fillSprite(TFT_BLACK);
-              hgSprite.setSwapBytes(true);
-              hgSprite.setPivot(22, 22);
-              }
-            hgSprite.fillSprite(TFT_BLACK);
-            hgSprite.drawWideLine(0, 44, 22, 0, 3, color, TFT_BLACK);
-            hgSprite.drawWideLine(22, 0, 44, 44, 3, color, TFT_BLACK);
-            hgSprite.drawWideLine(44, 44, 22, 35, 3, color, TFT_BLACK);
-            hgSprite.drawWideLine(22, 35, 0, 44, 3, color, TFT_BLACK);
-            hgSprite.drawWideLine(22, 0, 11, 41, 3, color, TFT_BLACK);
-            hgSprite.drawWideLine(22, 0, 33, 41, 3, color, TFT_BLACK);
-            String initials = BuddyManager::getBuddyInitials(Container[i].ID);
-            bool isBuddy = (initials != "  ");
-            if (isBuddy && blink) {
-                hgSprite.fillCircle(sprite_center_x, sprite_center_y, 9, TFT_WHITE);
-              } else {
-              hgSprite.fillCircle(sprite_center_x, sprite_center_y, 9, color);
-              }
-            //show thermal dot if climbing
-            if (settings->show_thermals && Container[i].ClimbRate >= 1.5) {
-              pgSprite.fillCircle(sprite_center_x, sprite_center_y, 7, climbColor);
-            }
-            sprite.setPivot(radar_center_x + x, radar_center_y - y);
-            hgSprite.pushRotated(&sprite, rel_heading, TFT_BLACK);
-            if (isLabels) {
-              if (!labelSprite.created()) {
-                labelSprite.createSprite(42, 26); // Adjust size as needed
-                labelSprite.fillSprite(TFT_BLACK);
-                labelSprite.setTextColor(TFT_WHITE, TFT_BLACK);
-                labelSprite.setTextDatum(MC_DATUM); // Center text
-                labelSprite.setPivot(21, 13); // Center pivot of Initail text
-              }
-                // Clear the label sprite for each frame
-                labelSprite.fillSprite(TFT_BLACK);
-                labelSprite.setTextColor(TFT_WHITE, TFT_BLACK);
-                labelSprite.setTextDatum(MC_DATUM); // Center text
-                labelSprite.drawString(initials, 21, 13, 4);
-                sprite.setPivot(radar_center_x + x + 35, radar_center_y - y - 13); //set text slighly away from center
-                labelSprite.pushToSprite(&sprite, radar_center_x + x + 35, radar_center_y - y - 13, TFT_BLACK); //ThisAircraft.Track is for Rotatiin back to horisontal
-                 }
-
-            break;
-          }
-          case 7: // Paraglider
-          {
-            if (!pgSprite.created()) {
-              pgSprite.createSprite(36, 36);
-              pgSprite.fillSprite(TFT_BLACK);
-              pgSprite.setSwapBytes(true);
-              pgSprite.setPivot(18, 18);
-              }
-            pgSprite.fillSprite(TFT_BLACK);
-            pgSprite.drawWideLine(6, 32, 18, 2, 3, color, TFT_BLACK);
-            pgSprite.drawWideLine(18, 2, 30, 32, 3, color, TFT_BLACK);
-            pgSprite.drawWideLine(30, 32, 18, 22, 3, color, TFT_BLACK);
-            pgSprite.drawWideLine(18, 22, 6, 32, 3, color, TFT_BLACK);
-            String initials = BuddyManager::getBuddyInitials(Container[i].ID);
-            bool isBuddy = (initials != "  ");
-            if (isBuddy && blink) {
-              pgSprite.fillCircle(sprite_center_x, sprite_center_y, 7, TFT_WHITE);
-              }
-            //Show thermal dot if climbing
-            if (settings->show_thermals && Container[i].ClimbRate >= 1.5) {
-              pgSprite.fillCircle(sprite_center_x, sprite_center_y, 7, climbColor);
-            }
-            sprite.setPivot(radar_center_x + x, radar_center_y - y);
-            pgSprite.pushRotated(&sprite, rel_heading, TFT_BLACK);
-              if (isLabels) {
-                if (!labelSprite.created()) {
-                  labelSprite.createSprite(42, 26); // Adjust size as needed
-                  labelSprite.fillSprite(TFT_BLACK);
-                  labelSprite.setTextColor(TFT_WHITE, TFT_BLACK);
-                  labelSprite.setTextDatum(MC_DATUM); // Center text
-                  labelSprite.setPivot(21, 13); // Center pivot of Initail text
-                }
-                // Clear the label sprite for each frame
-                labelSprite.fillSprite(TFT_BLACK);
-                labelSprite.setTextColor(TFT_WHITE, TFT_BLACK);
-                labelSprite.setTextDatum(TL_DATUM); // Center text
-                labelSprite.drawString(initials, 0, 0, 4);
-                // sprite.setPivot(radar_center_x + x + 35, radar_center_y - y - 13); //set text slighly away from center
-                // labelSprite.pushRotated(&sprite, ThisAircraft.Track, TFT_BLACK); //ThisAircraft.Track is for Rotatiin back to horisontal
-                labelSprite.pushToSprite(&sprite, radar_center_x + x + 30, radar_center_y - y - 13, TFT_BLACK); //ThisAircraft.Track is for Rotatiin back to horisontal
-              }
-            break;
-          }
-          case 2: //Tow Aircraft
-          case 5: //Drop Aircraft
-          case 8: //General Aircraft
-            if (!gaSprite.created()) {
-              gaSprite.createSprite(70, 70);
-              gaSprite.fillSprite(TFT_BLACK);
-              gaSprite.setColorDepth(16);
-              gaSprite.setSwapBytes(true);
-              gaSprite.pushImage(0, 0, 70, 70, GA);
-              gaSprite.setPivot(35, 35);
-                }
-                sprite.setPivot(radar_center_x + x, radar_center_y - y);
-                gaSprite.pushRotated(&sprite, rel_heading, TFT_BLACK);
-                if (isLabels) {
-                  if (!altSprite.created()) {
-                    altSprite.createSprite(84, 26); // Adjust size as needed
-                    altSprite.fillSprite(TFT_BLACK);
-                    altSprite.setTextColor(TFT_WHITE, TFT_BLACK);
-                    altSprite.setTextDatum(MC_DATUM); // Center text
-                    altSprite.setPivot(42, 13); // Center pivot of Initail text
-                  }
-                    // Clear the label sprite for each frame
-                    altSprite.fillSprite(TFT_BLACK);
-                    altSprite.setTextColor(TFT_WHITE, TFT_BLACK);
-                    altSprite.setTextDatum(MC_DATUM); // Center text
-                    altSprite.drawString(rel_vertical_str, 42, 13, 4);
-                    // sprite.setPivot(radar_center_x + x + 35, radar_center_y - y - 13); //set text slighly away from center
-                    altSprite.pushToSprite(&sprite, radar_center_x + x + 35, radar_center_y - y - 13, TFT_BLACK); //ThisAircraft.Track is for Rotatiin back to horisontal
-                     }
-                if (Container[i].RelativeVertical < 500 && Container[i].distance < 3000) {
-                  if (blink) {
-                    sprite.drawSmoothCircle(radar_center_x + x, radar_center_y - y, 10, color, TFT_BLACK);
-                    sprite.drawSmoothCircle(radar_center_x + x, radar_center_y - y, 20, color, TFT_BLACK);
-                    sprite.drawLine(radar_center_x, radar_center_y, radar_center_x + x, radar_center_y - y, color);
-                  }
-                }
+              hgSprite.drawWideLine(0, 44, 22, 0, 3, color, TFT_BLACK);
+              hgSprite.drawWideLine(22, 0, 44, 44, 3, color, TFT_BLACK);
+              hgSprite.drawWideLine(44, 44, 22, 35, 3, color, TFT_BLACK);
+              hgSprite.drawWideLine(22, 35, 0, 44, 3, color, TFT_BLACK);
+              hgSprite.drawWideLine(22, 0, 11, 41, 3, color, TFT_BLACK);
+              hgSprite.drawWideLine(22, 0, 33, 41, 3, color, TFT_BLACK);
+              sprite.setPivot(radar_center_x + x, radar_center_y - y);
+              hgSprite.pushRotated(&sprite, rel_heading, TFT_BLACK);
               break;
-          case 9: //Aircraft
-          case 10: //Aircraft
-            if (!aircraft.created()) {
-              aircraft.createSprite(60, 48);
-              aircraft.setColorDepth(16);
-              aircraft.setSwapBytes(true);
-              aircraft.fillSprite(TFT_BLACK);
-              aircraft.pushImage(0, 0, 60, 48, aircraft_small);
-              aircraft.setPivot(30, 24);
+            case 7:
+              if (!pgSprite.created()) {
+                pgSprite.createSprite(36, 36);
+                pgSprite.fillSprite(TFT_BLACK);
+                pgSprite.setSwapBytes(true);
+                pgSprite.setPivot(18, 18);
               }
-            sprite.setPivot(radar_center_x + x, radar_center_y - y);
-            aircraft.pushRotated(&sprite, rel_heading, TFT_BLACK);
-            if (isLabels) {
-              if (!altSprite.created()) {
-                altSprite.createSprite(84, 26); // Adjust size as needed
-                altSprite.fillSprite(TFT_BLACK);
-                altSprite.setTextColor(TFT_WHITE, TFT_BLACK);
-                altSprite.setTextDatum(MC_DATUM); // Center text
-                altSprite.setPivot(42, 13); // Center pivot of Initail text
+              pgSprite.fillSprite(TFT_BLACK);
+              pgSprite.drawWideLine(6, 32, 18, 2, 3, color, TFT_BLACK);
+              pgSprite.drawWideLine(18, 2, 30, 32, 3, color, TFT_BLACK);
+              pgSprite.drawWideLine(30, 32, 18, 22, 3, color, TFT_BLACK);
+              pgSprite.drawWideLine(18, 22, 6, 32, 3, color, TFT_BLACK);
+              sprite.setPivot(radar_center_x + x, radar_center_y - y);
+              pgSprite.pushRotated(&sprite, rel_heading, TFT_BLACK);
+              break;
+            case 2:
+            case 5:
+            case 8:
+              if (!gaSprite.created()) {
+                gaSprite.createSprite(70, 70);
+                gaSprite.fillSprite(TFT_BLACK);
+                gaSprite.setColorDepth(16);
+                gaSprite.setSwapBytes(true);
+                gaSprite.pushImage(0, 0, 70, 70, GA);
+                gaSprite.setPivot(35, 35);
               }
-                // Clear the label sprite for each frame
-                altSprite.fillSprite(TFT_BLACK);
-                altSprite.setTextColor(TFT_WHITE, TFT_BLACK);
-                altSprite.setTextDatum(MC_DATUM); // Center text
-                altSprite.drawString(rel_vertical_str, 42, 13, 4);
-                // sprite.setPivot(radar_center_x + x + 35, radar_center_y - y - 13); //set text slighly away from center
-                altSprite.pushToSprite(&sprite, radar_center_x + x + 35, radar_center_y - y - 13, TFT_BLACK); //ThisAircraft.Track is for Rotatiin back to horisontal
-                 }
-            if (Container[i].RelativeVertical < 1000 && Container[i].distance < 5000) {
-              if (blink) {
-                sprite.drawSmoothCircle(radar_center_x + x, radar_center_y - y, 10, color, TFT_BLACK);
-                sprite.drawSmoothCircle(radar_center_x + x, radar_center_y - y, 20, color, TFT_BLACK);
-                sprite.drawLine(radar_center_x, radar_center_y, radar_center_x + x, radar_center_y - y, color);
+              sprite.setPivot(radar_center_x + x, radar_center_y - y);
+              gaSprite.pushRotated(&sprite, rel_heading, TFT_BLACK);
+              break;
+            case 9:
+            case 10:
+              if (!aircraft.created()) {
+                aircraft.createSprite(60, 48);
+                aircraft.setColorDepth(16);
+                aircraft.setSwapBytes(true);
+                aircraft.fillSprite(TFT_BLACK);
+                aircraft.pushImage(0, 0, 60, 48, aircraft_small);
+                aircraft.setPivot(30, 24);
               }
-            }
-            break;
-          case 11: //Baloon
-            sprite.fillSmoothCircle(radar_center_x + x, radar_center_y - y, 18, TFT_RED);
-            sprite.fillRect(radar_center_x + x - 17, radar_center_y - y - 1, 34, 4, TFT_BLACK);
-            sprite.fillCircle(radar_center_x + x, radar_center_y - y + 2, 4, TFT_BLACK);
-            break;
-          default:
-          sprite.drawSmoothCircle(radar_center_x + x,
-            radar_center_y - y,
-              10, TFT_WHITE, TFT_BLACK);
-          sprite.fillCircle(radar_center_x + x,
-              radar_center_y - y + 2,
-              4, TFT_WHITE);
+              sprite.setPivot(radar_center_x + x, radar_center_y - y);
+              aircraft.pushRotated(&sprite, rel_heading, TFT_BLACK);
+              break;
+            case 11:
+              sprite.fillSmoothCircle(radar_center_x + x, radar_center_y - y, 18, TFT_RED);
+              sprite.fillRect(radar_center_x + x - 17, radar_center_y - y - 1, 34, 4, TFT_BLACK);
+              sprite.fillCircle(radar_center_x + x, radar_center_y - y + 2, 4, TFT_BLACK);
+              break;
+            default:
+              sprite.drawSmoothCircle(radar_center_x + x, radar_center_y - y, 10, TFT_WHITE, TFT_BLACK);
+              sprite.fillCircle(radar_center_x + x, radar_center_y - y + 2, 4, TFT_WHITE);
+              break;
+          }
 
-            break;
+          {
+            String initials = BuddyManager::getBuddyInitials(Container[i].ID);
+            bool isBuddy = (initials != "  ");
+            if (isBuddy && blink) {
+              sprite.drawSmoothCircle(radar_center_x + x, radar_center_y - y, 25, TFT_WHITE, TFT_BLACK);
+            }
+          }
+
+          if (settings->show_thermals && Container[i].ClimbRate >= 1.5) {
+            sprite.fillCircle(radar_center_x + x, radar_center_y - y, 7, climbColor);
+          }
+        }
+
+        if (isLabels) {
+          if (!altSprite.created()) {
+            altSprite.createSprite(84, 26);
+            altSprite.fillSprite(TFT_BLACK);
+            altSprite.setTextColor(TFT_WHITE, TFT_BLACK);
+            altSprite.setTextDatum(MC_DATUM);
+            altSprite.setPivot(42, 13);
+          }
+          altSprite.fillSprite(TFT_BLACK);
+          altSprite.setTextColor(TFT_WHITE, TFT_BLACK);
+          altSprite.setTextDatum(MC_DATUM);
+          altSprite.drawString(rel_vertical_str, 42, 13, 4);
+          altSprite.pushToSprite(&sprite, radar_center_x + x + 25, radar_center_y - y - 13, TFT_BLACK);
+        }
+
+        if (level && Container[i].distance < 3000) {
+          if (blink) {
+            sprite.drawSmoothCircle(radar_center_x + x, radar_center_y - y, 10, color, TFT_BLACK);
+            sprite.drawSmoothCircle(radar_center_x + x, radar_center_y - y, 20, color, TFT_BLACK);
+            sprite.drawLine(radar_center_x, radar_center_y, radar_center_x + x, radar_center_y - y, color);
+          }
         }
 
       }

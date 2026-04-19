@@ -45,8 +45,17 @@ void Traffic_Add()
         return;
     }
 
+    float vfilt = 0;
+    switch (settings->filter) {
+      case TRAFFIC_FILTER_500M:  vfilt =  500.0f; break;
+      case TRAFFIC_FILTER_1000M: vfilt = 1000.0f; break;
+      case TRAFFIC_FILTER_3500FT: vfilt = 1066.8f; break;
+      case TRAFFIC_FILTER_5000FT: vfilt = 1524.0f; break;
+      default: break;
+    }
+
     if ( settings->filter == TRAFFIC_FILTER_OFF  ||
-        (fo.RelativeVertical > -500 && fo.RelativeVertical <  500) ) {
+        (fo.RelativeVertical > -vfilt && fo.RelativeVertical < vfilt) ) {
 
       int i;
 
