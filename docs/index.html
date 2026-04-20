@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SkyView – User Manual</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --accent2: #3fb950;
+      --text: #c9d1d9;
+      --text-muted: #8b949e;
+      --warn-bg: #161b22;
+      --warn-border: #f0883e;
+      --note-border: #58a6ff;
+      --code-bg: #1f2937;
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      font-size: 16px;
+    }
+
+    /* ── Layout ── */
+    .layout { display: flex; min-height: 100vh; }
+
+    nav.sidebar {
+      width: 270px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 2rem 1.2rem;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    nav.sidebar .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 1.8rem;
+    }
+
+    nav.sidebar .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 700; color: #fff;
+    }
+
+    nav.sidebar .logo-text {
+      font-size: 1.15rem; font-weight: 700;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+
+    nav.sidebar ul { list-style: none; }
+    nav.sidebar > ul > li { margin-bottom: 0.25rem; }
+
+    nav.sidebar a {
+      display: block;
+      padding: 6px 10px;
+      border-radius: 6px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    nav.sidebar a:hover,
+    nav.sidebar a.active {
+      background: rgba(88, 166, 255, 0.1);
+      color: var(--accent);
+    }
+
+    nav.sidebar .sub-item a { padding-left: 22px; font-size: 0.82rem; }
+
+    main.content {
+      flex: 1;
+      max-width: 860px;
+      padding: 3rem 2.5rem;
+      margin: 0 auto;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center;
+      padding: 2.5rem 1rem 3rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 3rem;
+    }
+
+    .hero .badge {
+      display: inline-block;
+      background: rgba(88, 166, 255, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(88, 166, 255, 0.3);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    .hero h1 {
+      font-size: 2.6rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 0.6rem;
+    }
+
+    .hero p { color: var(--text-muted); font-size: 1.05rem; max-width: 540px; margin: 0 auto; }
+
+    /* ── Sections ── */
+    section { margin-bottom: 3.5rem; scroll-margin-top: 2rem; }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fff;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.5rem;
+      margin-bottom: 1.2rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+
+    h2::before { content: ""; display: block; width: 4px; height: 1.3em; background: var(--accent); border-radius: 2px; }
+
+    h3 {
+      font-size: 1.1rem; font-weight: 700;
+      color: var(--accent);
+      margin: 1.5rem 0 0.6rem;
+    }
+
+    h4 { font-size: 0.95rem; font-weight: 700; color: var(--text); margin: 1rem 0 0.4rem; }
+
+    p { margin-bottom: 0.9rem; }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Lists ── */
+    ul, ol { padding-left: 1.6rem; margin-bottom: 0.9rem; }
+    li { margin-bottom: 0.35rem; }
+    li strong { color: #fff; }
+
+    /* ── Code ── */
+    code {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.88em;
+      color: #e6edf3;
+    }
+
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.2rem;
+      overflow-x: auto;
+      margin-bottom: 1rem;
+    }
+
+    pre code { background: none; border: none; padding: 0; font-size: 0.9rem; }
+
+    /* ── Callouts ── */
+    .callout {
+      border-left: 4px solid var(--note-border);
+      background: rgba(88, 166, 255, 0.07);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 0.75rem 1rem;
+      margin: 1rem 0;
+      font-size: 0.92rem;
+    }
+
+    .callout.warn { border-color: var(--warn-border); background: rgba(240, 136, 62, 0.07); }
+    .callout.success { border-color: var(--accent2); background: rgba(63, 185, 80, 0.07); }
+    .callout strong { color: #fff; }
+
+    /* ── Cards ── */
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; margin: 1rem 0; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.1rem;
+    }
+
+    .card h4 { margin-top: 0; color: var(--accent2); }
+
+    /* ── Tables ── */
+    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; font-size: 0.9rem; }
+    th { background: var(--surface); color: var(--text); padding: 8px 12px; text-align: left; border-bottom: 2px solid var(--border); }
+    td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    tr:hover td { background: rgba(88, 166, 255, 0.04); }
+
+    /* ── Steps ── */
+    .steps { counter-reset: step; list-style: none; padding: 0; }
+    .steps li {
+      counter-increment: step;
+      display: flex; gap: 1rem;
+      margin-bottom: 0.8rem;
+      align-items: flex-start;
+    }
+    .steps li::before {
+      content: counter(step);
+      flex-shrink: 0;
+      width: 28px; height: 28px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; font-weight: 700;
+      margin-top: 2px;
+    }
+
+    /* ── Images ── */
+    figure { margin: 1.2rem 0; text-align: center; }
+    figure img {
+      max-width: 100%;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      display: block;
+      margin: 0 auto;
+    }
+    figcaption { color: var(--text-muted); font-size: 0.82rem; margin-top: 0.4rem; }
+
+    /* ── Divider ── */
+    hr { border: none; border-top: 1px solid var(--border); margin: 2.5rem 0; }
+
+    /* ── Version timeline ── */
+    .timeline { position: relative; padding-left: 1.5rem; }
+    .timeline::before {
+      content: "";
+      position: absolute; left: 0; top: 0; bottom: 0;
+      width: 2px; background: var(--border);
+    }
+    .timeline-item { position: relative; margin-bottom: 1.5rem; }
+    .timeline-item::before {
+      content: "";
+      position: absolute; left: -1.6rem; top: 6px;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--bg);
+    }
+    .timeline-item h3 { margin-top: 0; }
+
+    /* ── Color badges ── */
+    .color-chip {
+      display: inline-block;
+      width: 12px; height: 12px;
+      border-radius: 3px;
+      vertical-align: middle;
+      margin-right: 4px;
+    }
+
+    /* ── Mobile ── */
+    .menu-toggle {
+      display: none;
+      position: fixed; top: 12px; left: 12px; z-index: 200;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      cursor: pointer;
+      color: var(--text);
+      font-size: 1.2rem;
+    }
+
+    @media (max-width: 768px) {
+      .menu-toggle { display: block; }
+      nav.sidebar {
+        position: fixed; left: -280px; top: 0; z-index: 100;
+        width: 270px; transition: left 0.25s;
+        height: 100vh;
+      }
+      nav.sidebar.open { left: 0; box-shadow: 4px 0 20px rgba(0,0,0,0.5); }
+      main.content { padding: 4rem 1.2rem 2rem; }
+      .hero h1 { font-size: 1.9rem; }
+      .card-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation">☰</button>
+
+<div class="layout">
+
+  <!-- ── Sidebar ── -->
+  <nav class="sidebar" id="sidebar">
+    <div class="logo">
+      <div class="logo-icon">S</div>
+      <span class="logo-text">SkyView</span>
+    </div>
+    <ul>
+      <li><a href="#intro">Introduction</a></li>
+      <li><a href="#getting-started">Getting Started</a></li>
+      <li><a href="#display-screens">Display Screens</a></li>
+      <li>
+        <a href="#features">Features</a>
+        <ul>
+          <li class="sub-item"><a href="#buddy-list">Buddy List</a></li>
+          <li class="sub-item"><a href="#vertical-sep">Vertical Separation</a></li>
+          <li class="sub-item"><a href="#proximity">Proximity Alerting</a></li>
+          <li class="sub-item"><a href="#tap-target">Tap on Target</a></li>
+          <li class="sub-item"><a href="#battery">Battery Management</a></li>
+        </ul>
+      </li>
+      <li><a href="#controls">Device Controls</a></li>
+      <li><a href="#compass">Compass Page</a></li>
+      <li><a href="#bluetooth">Bluetooth LE</a></li>
+      <li>
+        <a href="#web-interface">Web Interface</a>
+        <ul>
+          <li class="sub-item"><a href="#buddy-manage">Buddy List Mgmt</a></li>
+          <li class="sub-item"><a href="#firmware">Firmware Updates</a></li>
+        </ul>
+      </li>
+      <li><a href="#settings">Settings</a></li>
+      <li><a href="#troubleshooting">Troubleshooting</a></li>
+      <li><a href="#version-history">Version History</a></li>
+      <li><a href="#support">Support &amp; Resources</a></li>
+    </ul>
+  </nav>
+
+  <!-- ── Main ── -->
+  <main class="content">
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="badge">User Manual</div>
+      <h1>SkyView</h1>
+      <p>Traffic awareness for aviation — AMOLED round display, FLARM &amp; GDL90 support</p>
+    </div>
+
+    <!-- Introduction -->
+    <section id="intro">
+      <h2>Introduction</h2>
+      <p>SkyView is a traffic awareness device for aviation that displays air traffic data received from EC radio devices (like SoftRF SenseCap T1000-E Card) and visualizes FLARM NMEA or Garmin GDL90 data on round AMOLED displays.</p>
+
+      <div class="card-grid">
+        <div class="card">
+          <h4>Compatible Hardware</h4>
+          <ul>
+            <li>LILYGO AMOLED 1.75" T-Display</li>
+            <li>Waveshare AMOLED 1.75" H0175Y003AM</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Compatible Traffic Sources</h4>
+          <ul>
+            <li>SoftRF SenseCap T1000-E (BLE)</li>
+            <li>XC Tracer (BLE)</li>
+            <li>FLARM PowerMouse (NMEA/WiFi/Serial)</li>
+            <li>SkyEcho, Stratux, PilotAware</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Getting Started -->
+    <section id="getting-started">
+      <h2>Getting Started</h2>
+
+      <h3>1 — Power On</h3>
+      <p>Long press (&gt;2 seconds) the Mode/Power button to turn on SkyView. When in "Storage Sleep" mode the device requires a USB-C charger to wake up. The device will boot to the Radar screen.</p>
+
+      <h3>2 — Connect Your Traffic Source</h3>
+      <div class="callout warn">
+        <strong>Important:</strong> Connection must be configured before traffic will appear.
+      </div>
+      <ul>
+        <li><strong>Bluetooth devices:</strong> Follow the <a href="#bluetooth">Bluetooth LE Management</a> section to pair your SoftRF or other FLARM/FANET device.</li>
+        <li><strong>WiFi/Serial connections:</strong> Configure via the <a href="#web-interface">Web Interface</a>.</li>
+      </ul>
+
+      <h3>3 — View Traffic</h3>
+      <p>Aircraft will appear on the Radar screen as they come within range. Use the Mode button to cycle through display screens.</p>
+    </section>
+
+    <!-- Display Screens -->
+    <section id="display-screens">
+      <h2>Display Screens</h2>
+      <p>SkyView offers three main display screens, cycled with the Mode button:</p>
+
+      <table>
+        <thead><tr><th>Screen</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Radar</strong></td><td>Visual polar plot with distance rings and aircraft symbols</td></tr>
+          <tr><td><strong>Traffic Info</strong></td><td>Detailed information about nearby aircraft</td></tr>
+          <tr><td><strong>Compass</strong></td><td>GPS-based navigation compass (can be disabled in Settings)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Navigation</h3>
+      <ul>
+        <li>Short press Mode button: Radar → Traffic Info → Compass → Radar</li>
+        <li>If Compass is disabled: Radar ⇄ Traffic Info</li>
+        <li>Swipe left/right on the touchscreen to navigate</li>
+      </ul>
+
+      <figure>
+        <img src="images/SkyView_Mode_button.gif" alt="Mode button screen navigation" />
+        <figcaption>Mode button cycling through screens</figcaption>
+      </figure>
+
+      <h3>Traffic Info Screen</h3>
+      <figure>
+        <img src="images/Info-screen-explained-small.png" alt="Traffic Info screen explained" />
+        <figcaption>Traffic Info screen layout</figcaption>
+      </figure>
+    </section>
+
+    <!-- Features -->
+    <section id="features">
+      <h2>Features</h2>
+
+      <!-- Buddy List -->
+      <h3 id="buddy-list">Buddy List &amp; Labels</h3>
+      <p>Identify known pilots easily on the Radar Screen. Buddies are displayed with special indicators to help you quickly recognise friends and familiar aircraft.</p>
+      <ul>
+        <li><strong>White blinking dot</strong> on buddy aircraft</li>
+        <li><strong>Initials</strong> displayed next to the aircraft symbol</li>
+        <li><strong>Circle (dot) icon</strong> marking buddy aircraft</li>
+      </ul>
+      <figure>
+        <img src="images/Buddy_initials.png" alt="Buddy display on radar" />
+        <figcaption>Buddy aircraft shown with initials on Radar</figcaption>
+      </figure>
+      <p>Buddy labels can be enabled or disabled from the on-screen Settings Page. See <a href="#buddy-manage">Managing Buddy List</a> for instructions on adding buddies.</p>
+
+      <hr />
+
+      <!-- Vertical Separation -->
+      <h3 id="vertical-sep">Vertical Separation Display</h3>
+      <p>Relative altitude displayed directly on the Radar Screen for Gliders, Helicopters, and General Aviation.</p>
+
+      <h4>Paraglider Color Coding</h4>
+      <table>
+        <thead><tr><th>Color</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><span class="color-chip" style="background:#00bcd4"></span> Cyan</td><td>Aircraft is above you</td></tr>
+          <tr><td><span class="color-chip" style="background:#4caf50"></span> Green</td><td>Aircraft is below you</td></tr>
+          <tr><td><span class="color-chip" style="background:#f44336"></span> Red</td><td>Aircraft at same height (±500 ft)</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        <strong>Note:</strong> Paragliders use color coding instead of numeric altitude display.
+      </div>
+      <figure>
+        <img src="images/SkyView_vertical_sep_resized.png" alt="Vertical separation display" />
+        <figcaption>Vertical separation color coding on Radar</figcaption>
+      </figure>
+
+      <hr />
+
+      <!-- Proximity Alerting -->
+      <h3 id="proximity">Proximity Alerting</h3>
+      <p>Visual proximity warnings when aircraft are close both vertically and horizontally:</p>
+      <ul>
+        <li><strong>Blinking circles</strong> around close aircraft</li>
+        <li><strong>Look-up direction line</strong> drawn from Radar center to the aircraft</li>
+      </ul>
+      <figure>
+        <img src="images/SkyView-proximity_alerting.png" alt="Proximity alerting" />
+        <figcaption>Proximity alert indicators on Radar</figcaption>
+      </figure>
+
+      <hr />
+
+      <!-- Tap on Target -->
+      <h3 id="tap-target">Tap on Target Aircraft</h3>
+      <p>Interactive touch — tap any aircraft on the Radar to open its Info Card.</p>
+      <ol class="steps">
+        <li><strong>Tap on aircraft</strong> in the Radar screen to open its Info Card.</li>
+        <li>The Info Card becomes <strong>locked</strong> (green lock icon).</li>
+        <li>Card stays visible as long as the aircraft is in view.</li>
+        <li><strong>Switch aircraft:</strong> Tap the green lock to unlock, then tap another aircraft.</li>
+        <li><strong>Return to Radar:</strong> Swipe left.</li>
+      </ol>
+      <figure>
+        <img src="images/SkyView-TapOntarget.gif" alt="Tap on target aircraft demo" />
+        <figcaption>Tapping an aircraft to view its Info Card</figcaption>
+      </figure>
+
+      <h4>Lock Feature</h4>
+      <ul>
+        <li>When green — Info page always shows this aircraft (if in range)</li>
+        <li>When aircraft out of range — screen shows any other visible aircraft or "No Traffic"</li>
+        <li>When aircraft returns — screen automatically switches back to the locked aircraft</li>
+        <li>To change the locked aircraft — swipe up or down to move to the next aircraft</li>
+      </ul>
+      <figure>
+        <img src="images/SkyView-Info-page.png" alt="Info page lock feature" />
+        <figcaption>Info page lock indicator</figcaption>
+      </figure>
+
+      <hr />
+
+      <!-- Battery Management -->
+      <h3 id="battery">Battery Management</h3>
+
+      <h4>Smart Charging</h4>
+      <ul>
+        <li>Slower charging rate to improve battery longevity</li>
+        <li>Lower current near 100% for optimal energy absorption</li>
+        <li>Charge icon shows charging status and full-charge state</li>
+      </ul>
+      <div class="callout success">
+        <strong>Tip:</strong> Be patient — charge until the icon disappears and the battery icon turns green.
+      </div>
+
+      <h4>Battery Status Icons</h4>
+      <ul>
+        <li><strong>SkyView battery indicator</strong> — internal battery level</li>
+        <li><strong>External BLE device battery</strong> — battery status of connected devices (e.g. SoftRF T1000-E)</li>
+      </ul>
+
+      <h4>Battery Logging</h4>
+      <ul>
+        <li>Automatic log per discharge cycle</li>
+        <li>Tracks duration from full to low</li>
+        <li>Logs retrievable via web interface</li>
+      </ul>
+
+      <figure>
+        <img src="images/SkyView-battery-image.png" alt="Battery display" />
+        <figcaption>Battery status display</figcaption>
+      </figure>
+    </section>
+
+    <!-- Device Controls -->
+    <section id="controls">
+      <h2>Device Controls</h2>
+      <h3>Mode/Power Button</h3>
+
+      <table>
+        <thead><tr><th>Action</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td>Short press</td><td>Cycle view: Radar → Traffic Info → Compass</td></tr>
+          <tr><td>Double press</td><td>Go to Settings page</td></tr>
+          <tr><td>Long press (2 s)</td><td>Power options menu (Sleep / Full Power Off)</td></tr>
+          <tr><td>Long press while off</td><td>Power on device</td></tr>
+        </tbody>
+      </table>
+
+      <h4>Power Down Options</h4>
+      <ul>
+        <li><strong>Sleep Mode:</strong> Low-power sleep, wake with button press</li>
+        <li><strong>Storage Sleep:</strong> Deep sleep, requires USB power to wake</li>
+      </ul>
+      <div class="callout warn">
+        <strong>Note:</strong> Use Storage Sleep when keeping the device off for longer than a day.
+      </div>
+
+      <figure>
+        <img src="images/SkyView-powerdown-options.png" alt="Power down options menu" />
+        <figcaption>Power down options menu</figcaption>
+      </figure>
+    </section>
+
+    <!-- Compass -->
+    <section id="compass">
+      <h2>Compass Page</h2>
+      <p>GPS-based compass displaying:</p>
+      <ul>
+        <li>Heading track</li>
+        <li>Altitude</li>
+        <li>Speed</li>
+        <li>Number of GPS satellites received</li>
+      </ul>
+      <div class="callout">
+        <strong>Note:</strong> You must be moving for the compass to update.
+      </div>
+      <figure>
+        <img src="images/SkyView-Compas.png" alt="Compass page" />
+        <figcaption>Compass screen</figcaption>
+      </figure>
+    </section>
+
+    <!-- Bluetooth -->
+    <section id="bluetooth">
+      <h2>Bluetooth LE Management</h2>
+      <p>SkyView connects only to <strong>paired BLE devices</strong> for security and reliability, preventing unwanted connections on busy takeoffs.</p>
+
+      <h3>Pairing a Bluetooth Device</h3>
+      <ol class="steps">
+        <li>
+          <div>
+            <strong>Connect to SkyView WiFi</strong><br />
+            Power on your SkyView. Connect your phone/computer to the SkyView WiFi access point (available for 10 minutes after boot).<br />
+            <strong>Default WiFi Password:</strong> <code>12345678</code>
+          </div>
+        </li>
+        <li>
+          <div>
+            <strong>Access the Web Interface</strong><br />
+            Open your browser and navigate to <a href="http://192.168.1.1">http://192.168.1.1</a>
+          </div>
+        </li>
+        <li>
+          <div>
+            <strong>Pair Your Device</strong><br />
+            Click <strong>BLE Manage</strong> → <strong>Scan for BLE devices</strong>. The scan shows only FLARM/FANET-capable devices. Click <strong>Add</strong> next to your SoftRF device.
+          </div>
+        </li>
+        <li>
+          <div>
+            <strong>Managing Paired Devices</strong><br />
+            Remove previously paired devices on the same page. Only paired devices will auto-connect.
+          </div>
+        </li>
+      </ol>
+
+      <div class="card-grid">
+        <div class="card">
+          <h4>Benefits of Managed BLE</h4>
+          <ul>
+            <li>Prevents random connections on crowded takeoffs</li>
+            <li>NimBLE stack for improved power efficiency</li>
+            <li>Scan shows only relevant devices</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Web Interface -->
+    <section id="web-interface">
+      <h2>Web Interface</h2>
+      <p>The SkyView web interface provides configuration, firmware updates, and file management.</p>
+
+      <h3>Accessing the Web Interface</h3>
+      <ol class="steps">
+        <li>
+          <div>
+            <strong>Connect to SkyView WiFi</strong><br />
+            SSID: <code>SkyView-XXXXXX</code> &nbsp;|&nbsp; Password: <code>12345678</code><br />
+            Available for 10 minutes after boot.
+          </div>
+        </li>
+        <li>
+          <div>
+            <strong>Open your browser</strong><br />
+            Navigate to <a href="http://192.168.1.1">http://192.168.1.1</a>
+          </div>
+        </li>
+      </ol>
+
+      <!-- Buddy List Management -->
+      <h3 id="buddy-manage">Managing Buddy List</h3>
+      <p>Add pilot buddies for easy identification on the Radar screen. Each line in <code>buddylist.txt</code> contains: <code>HEX_ID,Pilot Name</code></p>
+
+      <h4>Edit Online</h4>
+      <ol class="steps">
+        <li>Access the SkyView web interface</li>
+        <li>Navigate to the <strong>Upload Files</strong> page</li>
+        <li>
+          <figure>
+            <img src="images/SkyView_File_Manager.png" alt="File manager page" style="max-width:480px" />
+            <figcaption>File Manager page</figcaption>
+          </figure>
+        </li>
+        <li>Under <em>Buddy List</em>, click <strong>Edit Online</strong></li>
+        <li>Add or remove buddies in the text area — labels appear on Radar immediately</li>
+      </ol>
+      <figure>
+        <img src="images/SkyView_BuddyList_Manager.png" alt="Buddy list manager" style="max-width:480px" />
+        <figcaption>Buddy List online editor</figcaption>
+      </figure>
+
+      <h4>Download / Upload File</h4>
+      <ol class="steps">
+        <li>Access the SkyView web interface</li>
+        <li>Navigate to the file upload page</li>
+        <li>Select your <code>buddylist.txt</code> file and click <strong>Upload</strong></li>
+        <li>Buddy labels appear on the Radar screen</li>
+      </ol>
+
+      <h4>Example buddylist.txt</h4>
+      <pre><code>200ABC,Chrigel Maurer
+1F00C1,Paul Guschlbauer</code></pre>
+      <div class="callout">
+        <strong>Note:</strong> A sample buddy list file is included with SkyView releases.
+      </div>
+
+      <!-- Firmware Updates -->
+      <h3 id="firmware">Firmware Updates</h3>
+      <ol class="steps">
+        <li>
+          <div>
+            <strong>Download Firmware</strong><br />
+            Get the latest <code>.bin</code> file from the <a href="https://github.com/slash-bit/SkyView-AMOLED-round-1.75-TFT_eSPI/releases" target="_blank">SkyView GitHub releases page</a>.
+          </div>
+        </li>
+        <li>
+          <div>
+            <strong>Connect to SkyView WiFi</strong> and open <a href="http://192.168.1.1">http://192.168.1.1</a>
+          </div>
+        </li>
+        <li>
+          <div>
+            <strong>Upload Firmware</strong><br />
+            Navigate to <strong>Update Firmware</strong>, select the <code>.bin</code> file, click <strong>Upload</strong>. Device restarts automatically.
+          </div>
+        </li>
+      </ol>
+      <div class="callout success">
+        <strong>Video Tutorial:</strong> <a href="https://youtu.be/NbYAM7KYvmo" target="_blank">Watch the firmware update tutorial on YouTube</a>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section id="settings">
+      <h2>Settings</h2>
+      <p>Access on-device settings: from the Info page, tap the <strong>cogs icon</strong> to open Settings.</p>
+      <figure>
+        <img src="images/SkyView-seetings-cogs.png" alt="Settings cogs icon" style="max-width:200px" />
+        <figcaption>Cogs icon on Info page</figcaption>
+      </figure>
+
+      <figure>
+        <img src="images/SkyView-settings-1.png" alt="Settings page 1" style="max-width:320px" />
+        <figcaption>Settings page 1</figcaption>
+      </figure>
+
+      <table>
+        <thead><tr><th>Setting</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Traffic Filters</td><td>Filter aircraft types to display</td></tr>
+          <tr><td>Show Thermals</td><td>Show coloured dots when paraglider is climbing</td></tr>
+          <tr><td>Radar North Up</td><td>North-Up or Track-Up radar orientation</td></tr>
+          <tr><td>Show Labels</td><td>Enable/disable buddy initials on Radar page</td></tr>
+        </tbody>
+      </table>
+
+      <figure>
+        <img src="images/SkyView-settings-2.png" alt="Settings page 2" style="max-width:320px" />
+        <figcaption>Settings page 2</figcaption>
+      </figure>
+
+      <table>
+        <thead><tr><th>Setting</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Compass Page</td><td>Enable/disable Compass screen in rotation</td></tr>
+          <tr><td>Voice Alerts</td><td>Enable/disable traffic announcements (audio-enabled devices)</td></tr>
+          <tr><td>Power Options</td><td>Opens the Power Options menu</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        Swipe up/down to scroll settings. Tap options to change. Changes are saved automatically.
+      </div>
+    </section>
+
+    <!-- Troubleshooting -->
+    <section id="troubleshooting">
+      <h2>Troubleshooting</h2>
+
+      <h3>WiFi Access Point Not Available</h3>
+      <ul>
+        <li>WiFi AP is only available for 10 minutes after power-on</li>
+        <li>Restart device and connect within 10 minutes</li>
+        <li>Default password: <code>12345678</code></li>
+      </ul>
+
+      <h3>Bluetooth Device Won't Connect</h3>
+      <ul>
+        <li>Ensure device is paired via the BLE Manage page</li>
+        <li>Only paired devices can connect</li>
+        <li>Check that BLE device is powered on and in range</li>
+        <li>Remove and re-add device if connection issues persist</li>
+      </ul>
+
+      <h3>No Traffic Displayed</h3>
+      <ul>
+        <li>Verify BLE/Serial/WiFi connection to traffic source</li>
+        <li>Check that traffic source is receiving data</li>
+        <li>Ensure SkyView is configured for the correct protocol (NMEA/GDL90)</li>
+        <li>Check connection status on web interface</li>
+      </ul>
+
+      <h3>Battery Not Charging</h3>
+      <ul>
+        <li>Use an appropriate USB-C cable and charger</li>
+        <li>Charging is deliberately slower for battery health</li>
+        <li>Wait until green battery icon appears (full charge)</li>
+        <li>Check battery logs via web interface if issues persist</li>
+      </ul>
+
+      <h3>Device Won't Power On</h3>
+      <ul>
+        <li>Ensure long press (&gt;2 seconds) on the power button</li>
+        <li>Check battery charge level</li>
+        <li>Try connecting to USB power</li>
+      </ul>
+
+      <h3>Screen Timeout</h3>
+      <ul>
+        <li>Radar screen updates every 5 seconds</li>
+        <li>Text view times out after 7 seconds</li>
+        <li>Touch screen to wake display</li>
+        <li>Adjust timeout in Settings page</li>
+      </ul>
+    </section>
+
+    <!-- Version History -->
+    <section id="version-history">
+      <h2>Version History</h2>
+      <div class="timeline">
+        <div class="timeline-item">
+          <h3>VB006 <span style="font-size:0.75rem;color:var(--accent2);font-weight:400">(Latest)</span></h3>
+          <ul>
+            <li>Revamped battery/power management using SY6970 chip</li>
+            <li>NimBLE Bluetooth stack for reduced power consumption</li>
+            <li>Tap on aircraft to see details and lock Info Card</li>
+            <li>Battery charging improvements and logging</li>
+            <li>External BLE device battery status display</li>
+          </ul>
+        </div>
+        <div class="timeline-item">
+          <h3>VB005</h3>
+          <ul>
+            <li>Managed BLE connections (paired devices only)</li>
+            <li>Improved Mode/Power button (long press to power on/off)</li>
+            <li>Enhanced power management</li>
+          </ul>
+        </div>
+        <div class="timeline-item">
+          <h3>VB004</h3>
+          <ul>
+            <li>Vertical separation display on Radar</li>
+            <li>Color-coded altitude for paragliders</li>
+            <li>Proximity alerting with visual indicators</li>
+            <li>Improved graphics rendering and speed</li>
+            <li>Blinking buddy indicators</li>
+          </ul>
+        </div>
+        <div class="timeline-item">
+          <h3>VB003</h3>
+          <ul>
+            <li>Buddy list and labels feature</li>
+            <li>Web interface for buddy list upload</li>
+            <li>Buddy identification on Radar screen</li>
+            <li>Firmware update via web interface</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Support -->
+    <section id="support">
+      <h2>Support &amp; Resources</h2>
+      <div class="card-grid">
+        <div class="card">
+          <h4>GitHub Repository</h4>
+          <a href="https://github.com/slash-bit/SkyView-AMOLED-round-1.75-TFT_eSPI" target="_blank">SkyView AMOLED GitHub</a>
+        </div>
+        <div class="card">
+          <h4>Firmware Downloads</h4>
+          <a href="https://github.com/slash-bit/SkyView-AMOLED-round-1.75-TFT_eSPI/releases" target="_blank">Latest Firmware Binaries</a>
+        </div>
+        <div class="card">
+          <h4>Video Tutorials</h4>
+          <a href="https://youtu.be/NbYAM7KYvmo" target="_blank">Firmware Update Tutorial</a>
+        </div>
+      </div>
+      <p style="margin-top:2rem;color:var(--text-muted);font-size:0.85rem">Manual Version 1.0 &nbsp;·&nbsp; Based on firmware VB003–VB006 &nbsp;·&nbsp; Updated 2025</p>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  // Mobile sidebar toggle
+  const toggle = document.getElementById('menuToggle');
+  const sidebar = document.getElementById('sidebar');
+  toggle.addEventListener('click', () => sidebar.classList.toggle('open'));
+  document.addEventListener('click', e => {
+    if (!sidebar.contains(e.target) && !toggle.contains(e.target)) sidebar.classList.remove('open');
+  });
+
+  // Active sidebar link on scroll
+  const sections = document.querySelectorAll('section[id], div.hero');
+  const navLinks = document.querySelectorAll('nav.sidebar a[href^="#"]');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`nav.sidebar a[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>
