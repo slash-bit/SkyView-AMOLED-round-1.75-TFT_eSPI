@@ -54,7 +54,8 @@ extern unsigned long TFTTimeMarker;
 #define RADAR_CIRCLES_COLOR 0x4C8D //Stormcloud rgb(79, 102, 106)
 #define RADAR_TEXT_COLOR RGB565(0, 171, 0)  //Darker green rgb(0, 171, 0)
 
-#define display_column_offset 6 //the H0175Y003AM display has a horizontal offset
+extern uint16_t display_column_offset;
+extern uint16_t display_row_offset;
 
 
 

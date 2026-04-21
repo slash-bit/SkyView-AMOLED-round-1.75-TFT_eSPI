@@ -691,9 +691,7 @@ void handleSettings() {
 <td align=right>\
 <select name='rotation'>\
 <option %s value='0'>0&#176;</option>\
-<option %s value='1'>90&#176;</option>\
 <option %s value='2'>180&#176;</option>\
-<option %s value='3'>270&#176;</option>\
 </select>\
 </td>\
 </tr>\
@@ -715,8 +713,8 @@ void handleSettings() {
     (settings->filter     == TRAFFIC_FILTER_ALARM ? "selected" : ""), TRAFFIC_FILTER_ALARM,
     (settings->power_save == POWER_SAVE_NONE     ? "selected" : ""), POWER_SAVE_NONE,
     (settings->power_save == POWER_SAVE_WIFI     ? "selected" : ""), POWER_SAVE_WIFI,
-    (settings->rotation == 0 ? "selected" : ""), (settings->rotation == 1 ? "selected" : ""),
-    (settings->rotation == 2 ? "selected" : ""), (settings->rotation == 3 ? "selected" : ""),
+    (settings->rotation == 0 ? "selected" : ""),
+    (settings->rotation == 2 ? "selected" : ""),
      settings->team
   );
 

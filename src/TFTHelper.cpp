@@ -26,6 +26,8 @@
 
 
 #include "SkyView.h"
+uint16_t display_column_offset = 6;
+uint16_t display_row_offset = 0;
 int TFT_view_mode = 0;
 unsigned long TFTTimeMarker = 0;
 bool EPD_display_frontpage = false;
@@ -188,7 +190,7 @@ void draw_first()
 
   sprite.drawString("powered by SoftRF",233,293,4);
   sprite.drawString(SKYVIEW_FIRMWARE_VERSION,180,400,2);
-  lcd_PushColors(6, 0, 466, 466, (uint16_t*)sprite.getPointer());
+  lcd_PushColors(display_column_offset, display_row_offset, 466, 466, (uint16_t*)sprite.getPointer());
   for (int i = 0; i <= 255; i++)
   {
     lcd_brightness(i);
@@ -218,8 +220,18 @@ void TFT_setup(void) {
   if (spiMutex == NULL) {
       Serial.println("Failed to create SPI mutex!");
   }
+  // Clear GRAM borders in rotation 0 to avoid green artifacts at display edges
+  lcd_setRotation(0);
+  lcd_fill(0, 0, 480, 7, 0x0000);
+  lcd_fill(0, 466, 480, 480, 0x0000);
+  lcd_fill(0, 0, 7, 480, 0x0000);
+  lcd_fill(473, 0, 480, 480, 0x0000);
+  if (settings->rotation != 0 && settings->rotation != 2)
+    settings->rotation = 0;
   lcd_setRotation(settings->rotation);
-  lcd_brightness(0); // 0-255    
+  display_column_offset = 7;
+  display_row_offset = 0;
+  lcd_brightness(0); // 0-255
 
   Serial.printf("Free heap: %d bytes\n", esp_get_free_heap_size());
   Serial.printf("Largest block: %d bytes\n", heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
@@ -517,7 +529,7 @@ void settings_page_1() {
     sprite.fillTriangle(180, 430, 197, 417, 197, 443, TFT_BLUEBUTTON);
     sprite.fillTriangle(160, 430, 180, 417, 180, 443, TFT_BLUEBUTTON);
 
-    lcd_PushColors(display_column_offset, 0, 466, 466, (uint16_t*)sprite.getPointer());
+    lcd_PushColors(display_column_offset, display_row_offset, 466, 466, (uint16_t*)sprite.getPointer());
     lcd_brightness(255);
     xSemaphoreGive(spiMutex);
   } else {
@@ -576,7 +588,7 @@ void settings_page_2() {
     sprite.fillTriangle(180, 430, 197, 417, 197, 443, TFT_BLUEBUTTON);
     sprite.fillTriangle(160, 430, 180, 417, 180, 443, TFT_BLUEBUTTON);
 
-    lcd_PushColors(display_column_offset, 0, 466, 466, (uint16_t*)sprite.getPointer());
+    lcd_PushColors(display_column_offset, display_row_offset, 466, 466, (uint16_t*)sprite.getPointer());
     lcd_brightness(255);
     xSemaphoreGive(spiMutex);
   } else {
@@ -640,7 +652,7 @@ void TFT_show_power_menu()
     sprite.setCursor(LCD_WIDTH / 2 - shutdown_wd / 2, 310);
     sprite.printf(shutdown_txt);
 
-    lcd_PushColors(display_column_offset, 0, 466, 466, (uint16_t*)sprite.getPointer());
+    lcd_PushColors(display_column_offset, display_row_offset, 466, 466, (uint16_t*)sprite.getPointer());
     lcd_brightness(255);
 
     xSemaphoreGive(spiMutex);
