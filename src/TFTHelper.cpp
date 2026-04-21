@@ -26,6 +26,8 @@
 
 
 #include "SkyView.h"
+uint16_t display_column_offset = 6;
+uint16_t display_row_offset = 0;
 int TFT_view_mode = 0;
 unsigned long TFTTimeMarker = 0;
 bool EPD_display_frontpage = false;
@@ -188,7 +190,7 @@ void draw_first()
 
   sprite.drawString("powered by SoftRF",233,293,4);
   sprite.drawString(SKYVIEW_FIRMWARE_VERSION,180,400,2);
-  lcd_PushColors(6, 0, 466, 466, (uint16_t*)sprite.getPointer());
+  lcd_PushColors(display_column_offset, display_row_offset, 466, 466, (uint16_t*)sprite.getPointer());
   for (int i = 0; i <= 255; i++)
   {
     lcd_brightness(i);
@@ -218,8 +220,18 @@ void TFT_setup(void) {
   if (spiMutex == NULL) {
       Serial.println("Failed to create SPI mutex!");
   }
-  lcd_setRotation(0); //adjust #define display_column_offset for different rotations
-  lcd_brightness(0); // 0-255    
+  // Clear GRAM borders in rotation 0 to avoid green artifacts at display edges
+  lcd_setRotation(0);
+  lcd_fill(0, 0, 480, 7, 0x0000);
+  lcd_fill(0, 466, 480, 480, 0x0000);
+  lcd_fill(0, 0, 7, 480, 0x0000);
+  lcd_fill(473, 0, 480, 480, 0x0000);
+  if (settings->rotation != 0 && settings->rotation != 2)
+    settings->rotation = 0;
+  lcd_setRotation(settings->rotation);
+  display_column_offset = 7;
+  display_row_offset = 0;
+  lcd_brightness(0); // 0-255
 
   Serial.printf("Free heap: %d bytes\n", esp_get_free_heap_size());
   Serial.printf("Largest block: %d bytes\n", heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
@@ -474,44 +486,34 @@ void settings_page_1() {
     sprite.setCursor(160, 40);
     sprite.printf("Settings");
 
-    text_y = 140; //bottom of the text
+    text_y = 100;
     sprite.setCursor(button_x - 300, text_y);
-    sprite.printf("Traffic filter 500m");
-    if ( settings->filter  == TRAFFIC_FILTER_500M) {
-      settings_button(button_x, text_y, true);
-    } else {
-      settings_button(button_x, text_y, false); 
-    }
+    sprite.printf("Alt Filter: %s",
+      settings->filter == TRAFFIC_FILTER_OFF    ? "OFF" :
+      settings->filter == TRAFFIC_FILTER_500M   ? "500m" :
+      settings->filter == TRAFFIC_FILTER_1000M  ? "1000m" :
+      settings->filter == TRAFFIC_FILTER_3500FT ? "3500ft" :
+      settings->filter == TRAFFIC_FILTER_5000FT ? "5000ft" : "OFF");
 
-    text_y = 200;
+    text_y = 155;
     sprite.setCursor(button_x - 300, text_y);
     sprite.printf("Show Thermals");
-    if (settings->show_thermals) {
-      settings_button(button_x, text_y, true);
-    } else {
-      settings_button(button_x, text_y, false);
-    }
-    
-    text_y = 260;
+    settings_button(button_x, text_y, settings->show_thermals);
+
+    text_y = 210;
     sprite.setCursor(button_x - 300, text_y);
     sprite.printf("Radar North Up");
-    if (settings->orientation == DIRECTION_NORTH_UP) {
-      settings_button(button_x, text_y, true);
-    } else {
-      settings_button(button_x, text_y, false); 
-    }
+    settings_button(button_x, text_y, settings->orientation == DIRECTION_NORTH_UP);
+
+    text_y = 265;
+    sprite.setCursor(button_x - 300, text_y);
+    sprite.printf("Show Labels");
+    settings_button(button_x, text_y, isLabels);
 
     text_y = 320;
     sprite.setCursor(button_x - 300, text_y);
-    sprite.printf("Show Labels");
-
-    if (isLabels) {
-      settings_button(button_x, text_y, true);
-
-    } else {
-      settings_button(button_x, text_y, false);
-
-    }
+    sprite.printf("Arrowhead Icons");
+    settings_button(button_x, text_y, settings->icon_style == ICON_STYLE_ARROWHEAD);
 
 
     // Page indicator
@@ -527,7 +529,7 @@ void settings_page_1() {
     sprite.fillTriangle(180, 430, 197, 417, 197, 443, TFT_BLUEBUTTON);
     sprite.fillTriangle(160, 430, 180, 417, 180, 443, TFT_BLUEBUTTON);
 
-    lcd_PushColors(display_column_offset, 0, 466, 466, (uint16_t*)sprite.getPointer());
+    lcd_PushColors(display_column_offset, display_row_offset, 466, 466, (uint16_t*)sprite.getPointer());
     lcd_brightness(255);
     xSemaphoreGive(spiMutex);
   } else {
@@ -552,38 +554,26 @@ void settings_page_2() {
     sprite.setCursor(160, 40);
     sprite.printf("Settings");
 
-    text_y = 140;
+    text_y = 100;
     sprite.setCursor(button_x - 300, text_y);
     sprite.printf("Compass Page");
-    if (settings->compass) {
-      settings_button(button_x, text_y, true);
-    } else {
-      settings_button(button_x, text_y, false);
-    }
+    settings_button(button_x, text_y, settings->compass);
 
-    text_y = 200;
+    text_y = 155;
     sprite.setCursor(button_x - 300, text_y);
     sprite.printf("Voice Alerts");
-    if (settings->voice_alerts) {
-      settings_button(button_x, text_y, true);
-    } else {
-      settings_button(button_x, text_y, false);
-    }
+    settings_button(button_x, text_y, settings->voice_alerts);
 
-    text_y = 260;
+    text_y = 210;
     sprite.setCursor(button_x - 300, text_y);
     sprite.printf("Demo Mode");
-    if (settings->demo_mode) {
-      settings_button(button_x, text_y, true);
-    } else {
-      settings_button(button_x, text_y, false);
-    }
+    settings_button(button_x, text_y, settings->demo_mode);
 
-    text_y = 340;
-    sprite.setCursor(button_x - 240, 320);
+    text_y = 265;
+    sprite.setCursor(button_x - 240, 250);
     sprite.printf("Power Options");
     sprite.setSwapBytes(true);
-    sprite.pushImage(button_x, 290, 48, 47, power_button_small);
+    sprite.pushImage(button_x, 240, 48, 47, power_button_small);
 
     // Page indicator
     sprite.setTextColor(TFT_DARKGREY, TFT_BLACK);
@@ -598,7 +588,7 @@ void settings_page_2() {
     sprite.fillTriangle(180, 430, 197, 417, 197, 443, TFT_BLUEBUTTON);
     sprite.fillTriangle(160, 430, 180, 417, 180, 443, TFT_BLUEBUTTON);
 
-    lcd_PushColors(display_column_offset, 0, 466, 466, (uint16_t*)sprite.getPointer());
+    lcd_PushColors(display_column_offset, display_row_offset, 466, 466, (uint16_t*)sprite.getPointer());
     lcd_brightness(255);
     xSemaphoreGive(spiMutex);
   } else {
@@ -662,7 +652,7 @@ void TFT_show_power_menu()
     sprite.setCursor(LCD_WIDTH / 2 - shutdown_wd / 2, 310);
     sprite.printf(shutdown_txt);
 
-    lcd_PushColors(display_column_offset, 0, 466, 466, (uint16_t*)sprite.getPointer());
+    lcd_PushColors(display_column_offset, display_row_offset, 466, 466, (uint16_t*)sprite.getPointer());
     lcd_brightness(255);
 
     xSemaphoreGive(spiMutex);

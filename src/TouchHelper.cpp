@@ -15,6 +15,16 @@
 #include "BatteryHelper.h"
 // Create an instance of the CST9217 class
 
+void applyTouchRotation(int16_t &x, int16_t &y) {
+  int16_t tmp;
+  switch (settings->rotation) {
+    case 1: tmp = x; x = y; y = LCD_HEIGHT - 1 - tmp; break;
+    case 2: x = LCD_WIDTH - 1 - x; y = LCD_HEIGHT - 1 - y; break;
+    case 3: tmp = x; x = LCD_WIDTH - 1 - y; y = tmp; break;
+    default: break;
+  }
+}
+
 TouchDrvCST92xx touchSensor;
 
 uint8_t touchAddress = 0x5A;
@@ -186,25 +196,27 @@ void tapHandler(int x, int y) {
     TFT_Mode(true);
   } 
   // Settings Page 1 tap handlers
-  else if (x > 320 && x < 420 && y > 110 && y < 170
+  else if (x > 40 && x < 400 && y > 75 && y < 128
     && TFT_view_mode == VIEW_MODE_SETTINGS) {
     extern int settings_page_number;
     if (settings_page_number == 1) {
-      // Traffic Filter +- 500m
-      if (settings->filter == TRAFFIC_FILTER_500M) {
-        settings->filter = TRAFFIC_FILTER_OFF;
-      } else {
-        settings->filter = TRAFFIC_FILTER_500M;
+      // Cycling Alt Filter
+      switch (settings->filter) {
+        case TRAFFIC_FILTER_OFF:    settings->filter = TRAFFIC_FILTER_500M;   break;
+        case TRAFFIC_FILTER_500M:   settings->filter = TRAFFIC_FILTER_1000M;  break;
+        case TRAFFIC_FILTER_1000M:  settings->filter = TRAFFIC_FILTER_3500FT; break;
+        case TRAFFIC_FILTER_3500FT: settings->filter = TRAFFIC_FILTER_5000FT; break;
+        case TRAFFIC_FILTER_5000FT: settings->filter = TRAFFIC_FILTER_OFF;    break;
+        default:                    settings->filter = TRAFFIC_FILTER_OFF;    break;
       }
       settings_page();
-    }
-      else if (settings_page_number == 2) {
+    } else if (settings_page_number == 2) {
       // Compass Page toggle
       settings->compass = !settings->compass;
       settings_page();
     }
   }
-  else if (x > 320 && x < 420 && y > 170 && y < 230
+  else if (x > 320 && x < 420 && y > 130 && y < 183
     && TFT_view_mode == VIEW_MODE_SETTINGS) {
     extern int settings_page_number;
     if (settings_page_number == 1) {
@@ -219,7 +231,7 @@ void tapHandler(int x, int y) {
       settings_page();
     }
   }
-  else if (x > 320 && x < 420 && y > 227 && y < 290
+  else if (x > 320 && x < 420 && y > 185 && y < 238
     && TFT_view_mode == VIEW_MODE_SETTINGS) {
     extern int settings_page_number;
     if (settings_page_number == 1) {
@@ -232,18 +244,11 @@ void tapHandler(int x, int y) {
       settings_page();
     } else if (settings_page_number == 2) {
       // Demo mode toggle - just toggle the flag and reboot
-      // The boot synchronization code will set the correct connection mode
       settings->demo_mode = !settings->demo_mode;
-
-      // Save to EEPROM first
       EEPROM_store();
       Serial.printf("Demo mode toggled: %s\n", settings->demo_mode ? "ON" : "OFF");
-
-      // Redraw settings page to show the new toggle state
       settings_page();
-      delay(500);  // Let user see the toggle change
-
-      // Display reboot message
+      delay(500);
       if (settings->demo_mode) {
         Serial.println("Demo mode will be enabled on next boot");
         TFT_radar_Draw_Message("Demo Mode Enabled", "Rebooting...");
@@ -251,12 +256,11 @@ void tapHandler(int x, int y) {
         Serial.println("Demo mode will be disabled on next boot");
         TFT_radar_Draw_Message("Demo Mode Disabled", "Rebooting...");
       }
-
-      delay(2000);  // Show message for 2 seconds
-      ESP.restart();  // Reboot - settings will be applied during boot
+      delay(2000);
+      ESP.restart();
     }
   }
-  else if (x > 320 && x < 420 && y > 290 && y < 420
+  else if (x > 320 && x < 420 && y > 240 && y < 293
     && TFT_view_mode == VIEW_MODE_SETTINGS) {
     extern int settings_page_number;
     if (settings_page_number == 1) {
@@ -265,7 +269,19 @@ void tapHandler(int x, int y) {
       settings->show_labels = isLabels;
       settings_page();
     } else if (settings_page_number == 2) {
-        TFT_show_power_menu();
+      TFT_show_power_menu();
+    }
+  }
+  else if (x > 320 && x < 420 && y > 295 && y < 348
+    && TFT_view_mode == VIEW_MODE_SETTINGS) {
+    extern int settings_page_number;
+    if (settings_page_number == 1) {
+      // Arrowhead Icons toggle
+      if (settings->icon_style == ICON_STYLE_ARROWHEAD)
+        settings->icon_style = ICON_STYLE_CLASSIC;
+      else
+        settings->icon_style = ICON_STYLE_ARROWHEAD;
+      settings_page();
     }
   }
   else if (x > 400 && x < 466 && y > 170 && y < 280 && TFT_view_mode == VIEW_MODE_TEXT) {
@@ -304,8 +320,9 @@ void touchTask(void *parameter) {
     //   Serial.println("Interrupt triggered!");
         IIC_Interrupt_Flag = false; // Reset interrupt flag
       uint8_t points = touchSensor.getPoint(currentX, currentY, 1); // Read single touch point
-  
+
       if (points > 0) {
+        applyTouchRotation(currentX[0], currentY[0]);
         // Record the starting touch position and time
         if (startX == -1 && startY == -1) {
           startX = currentX[0];
