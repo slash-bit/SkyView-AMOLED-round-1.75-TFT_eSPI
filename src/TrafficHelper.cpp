@@ -238,9 +238,9 @@ static void Traffic_Voice_One(traffic_t *fop)
         snprintf(message, sizeof(message), "%s %s %s",
              (fop->alarm_level < ALARM_LEVEL_URGENT ? WARNING_WORD1 : WARNING_WORD3),
              where, (voc_alt > 70 ? "high" : voc_alt < -70 ? "low" : "level"));
-        settings->voice = VOICE_2;  // Use voice2 instead of voice3
-        // Only play audio if voice alerts are enabled
+        // Only touch/play audio if voice alerts are enabled
         if (settings->voice_alerts) {
+          settings->voice = VOICE_2;  // Use voice2 instead of voice3
 #if defined(AUDIO)
           SoC->TTS(message);
 #endif
@@ -312,9 +312,9 @@ static void Traffic_Voice_One(traffic_t *fop)
                 "%s %s %s %s",           // was "traffic %s distance %s altitude %s"
                 ADVISORY_WORD, where, how_far, elev);
 
-    settings->voice = VOICE_1;  // slower male voice
-    // Only play audio if voice alerts are enabled
+    // Only touch/play audio if voice alerts are enabled
     if (settings->voice_alerts) {
+      settings->voice = VOICE_1;  // slower male voice
 #if defined(AUDIO)
       SoC->TTS(message);
 #endif
