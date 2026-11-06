@@ -511,11 +511,6 @@ void settings_page_1() {
     sprite.printf("Show Labels");
     settings_button(button_x, text_y, isLabels);
 
-    text_y = 320;
-    sprite.setCursor(button_x - 300, text_y);
-    sprite.printf("Arrowhead Icons");
-    settings_button(button_x, text_y, settings->icon_style == ICON_STYLE_ARROWHEAD);
-
 
     // Page indicator
     sprite.setTextColor(TFT_DARKGREY, TFT_BLACK);
@@ -571,10 +566,14 @@ void settings_page_2() {
     settings_button(button_x, text_y, settings->demo_mode);
 
     text_y = 265;
-    sprite.setCursor(button_x - 240, 250);
+    sprite.setCursor(button_x - 300, text_y);
+    sprite.printf("Arrowhead Icons");
+    settings_button(button_x, text_y, settings->icon_style == ICON_STYLE_ARROWHEAD);
+
+    sprite.setCursor(button_x - 240, 305);
     sprite.printf("Power Options");
     sprite.setSwapBytes(true);
-    sprite.pushImage(button_x, 240, 48, 47, power_button_small);
+    sprite.pushImage(button_x, 295, 48, 47, power_button_small);
 
     // Page indicator
     sprite.setTextColor(TFT_DARKGREY, TFT_BLACK);

@@ -273,19 +273,19 @@ void tapHandler(int x, int y) {
       settings->show_labels = isLabels;
       settings_page();
     } else if (settings_page_number == 2) {
-      TFT_show_power_menu();
-    }
-  }
-  else if (x > 320 && x < 420 && y > 295 && y < 348
-    && TFT_view_mode == VIEW_MODE_SETTINGS) {
-    extern int settings_page_number;
-    if (settings_page_number == 1) {
       // Arrowhead Icons toggle
       if (settings->icon_style == ICON_STYLE_ARROWHEAD)
         settings->icon_style = ICON_STYLE_CLASSIC;
       else
         settings->icon_style = ICON_STYLE_ARROWHEAD;
       settings_page();
+    }
+  }
+  else if (x > 320 && x < 420 && y > 295 && y < 348
+    && TFT_view_mode == VIEW_MODE_SETTINGS) {
+    extern int settings_page_number;
+    if (settings_page_number == 2) {
+      TFT_show_power_menu();
     }
   }
   else if (x > 400 && x < 466 && y > 170 && y < 280 && TFT_view_mode == VIEW_MODE_TEXT) {
