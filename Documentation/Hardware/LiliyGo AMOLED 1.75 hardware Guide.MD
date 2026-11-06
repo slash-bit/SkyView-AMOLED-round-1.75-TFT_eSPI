@@ -96,7 +96,7 @@ SkyView AMOLED supports **full voice traffic alerts**, including:
 - Configurable voice alerts can be disabled in the menu
 
 Here is the demo of the voice alerts - Youtube video:  
-[![SkyView AMOLED Voice Alerts Demo](https://img.youtube.com/vi/VIDEO_ID/0.jpg)](https://www.youtube.com/watch?v=VIDEO_ID)
+[![SkyView AMOLED Voice Alerts Demo](https://img.youtube.com/vi/9wNNOK7oC2w/0.jpg)](https://youtube.com/shorts/9wNNOK7oC2w)
 ---
 
 ### 🚫 What's Not Yet Implemented

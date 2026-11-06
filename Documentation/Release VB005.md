@@ -1,7 +1,7 @@
 ### Release VB005
 
 Improved Mode/Power button. Long press to start / Long press to shutdown 
-Bluetooth Connections are managed, SkyView will only connect to paireddevices.
+Bluetooth Connections are managed, SkyView will only connect to the paired devices.
 Unlike before it was connecting to any vario.
 
 ---
@@ -9,8 +9,8 @@ Unlike before it was connecting to any vario.
 
 **BLE Connection Managed**
 
-- SkyView will only connect to **Paired BLE devices** (unlike before it would connect to any Bluetooth deice, which could cause issues on a busy takeoff).
-- To pair your SoftRF (or another) bluetooth device. 
+- SkyView now only connects to the **Paired BLE devices** (unlike before, it would connect to any Bluetooth device, which could cause issues on a busy takeoff).
+- To pair your SoftRF via bluetooth. 
 1. **Connect to SkyView WiFi**
     - Power on your SkyView device.
     - Connect your computer or phone to the SkyView WiFi access point (available for 10 minutes after powering on). **Default password: 12345678**
@@ -20,14 +20,14 @@ Unlike before it was connecting to any vario.
     - Navigate to [http://192.168.1.1](http://192.168.1.1).
 
     ![Status_image](Status_image.png)
- 2. **Clcik BLE Manage button.**
-  - Click Scan for BLE devices.
-  - Click Add next to the found SoftRF device.
+ 2. **Click BLE Manage button.**
+  - Click Scan BLE devices.
+  - Pick your SoftRF and click Add button.
   - That's all
 > **Note:** You can also Remove previously paired devices on the same page.
 
 
-![BLEMAnage](BLEMAnage_image.png)
+![BLEMAnage](BLEManage_image.png)
 
 
 ---

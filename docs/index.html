@@ -321,6 +321,7 @@
         <a href="#features">Features</a>
         <ul>
           <li class="sub-item"><a href="#buddy-list">Buddy List</a></li>
+          <li class="sub-item"><a href="#puretrack-db">PureTrack Labels</a></li>
           <li class="sub-item"><a href="#vertical-sep">Vertical Separation</a></li>
           <li class="sub-item"><a href="#proximity">Proximity Alerting</a></li>
           <li class="sub-item"><a href="#tap-target">Tap on Target</a></li>
@@ -449,6 +450,57 @@
         <figcaption>Buddy aircraft shown with initials on Radar</figcaption>
       </figure>
       <p>Buddy labels can be enabled or disabled from the on-screen Settings Page. See <a href="#buddy-manage">Managing Buddy List</a> for instructions on adding buddies.</p>
+
+      <h4 id="puretrack-db">PureTrack Labels Database</h4>
+      <p>Besides your own buddy list, SkyView can name aircraft from the <a href="https://puretrack.io" target="_blank">PureTrack</a> labels database: a list of device IDs and the names pilots registered for them on PureTrack. When an aircraft is found in it, the <strong>Traffic Info</strong> screen shows its name instead of the hex ID.</p>
+      <table>
+        <thead><tr><th>Shown on Traffic Info</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td><span class="color-chip" style="background:#4caf50"></span> Green name</td><td>Your buddy list (always takes priority)</td></tr>
+          <tr><td><span class="color-chip" style="background:#00bcd4"></span> Cyan name</td><td>PureTrack database</td></tr>
+          <tr><td><span class="color-chip" style="background:#ffffff"></span> White hex ID</td><td>Not found in either</td></tr>
+        </tbody>
+      </table>
+      <p>The database is the file <code>puretrack.cdb</code>. It is rebuilt automatically every week from PureTrack and published on GitHub, so download a fresh copy now and then to pick up newly registered pilots.</p>
+
+      <h4>Download and install puretrack.cdb</h4>
+      <ol class="steps">
+        <li>
+          <div>
+            <strong>Download the latest database</strong><br />
+            <a href="https://github.com/slash-bit/SkyView-AMOLED-round-1.75-TFT_eSPI/releases/download/puretrack-db/puretrack.cdb">puretrack.cdb</a> (from the <a href="https://github.com/slash-bit/SkyView-AMOLED-round-1.75-TFT_eSPI/releases/tag/puretrack-db" target="_blank">PureTrack database release</a>, about 110&nbsp;KB). Keep the file name <code>puretrack.cdb</code>.
+          </div>
+        </li>
+        <li>
+          <div>
+            <strong>Connect to SkyView WiFi</strong> and open <a href="http://192.168.1.1">http://192.168.1.1</a> (see <a href="#web-interface">Web Interface</a>)
+          </div>
+        </li>
+        <li>
+          <div>
+            <strong>Upload the file</strong><br />
+            Go to the <strong>Upload Files</strong> page. Under <em>PureTrack Database</em>, choose <code>puretrack.cdb</code> and click <strong>Upload</strong>. It replaces any older copy on the device.
+          </div>
+        </li>
+        <li>
+          <div>
+            <strong>Enable PureTrack labels</strong><br />
+            In <strong>Settings</strong>, set <em>Aircrafts data</em> to <strong>PureTrack</strong> and save.
+          </div>
+        </li>
+        <li>
+          <div>
+            <strong>Restart SkyView</strong><br />
+            The database is loaded at start-up. The serial log shows <code>PureTrack records: …</code> when it loaded.
+          </div>
+        </li>
+      </ol>
+      <div class="callout">
+        <strong>Tip:</strong> The <strong>Download</strong> button next to <em>PureTrack Database</em> on the Upload Files page saves the copy currently on the device, so you can check which version you have.
+      </div>
+      <div class="callout warn">
+        <strong>Note:</strong> Only pilots who added a label for their tracker on PureTrack are in the database. To show a name for anyone else, add them to your <a href="#buddy-manage">buddy list</a>.
+      </div>
 
       <hr />
 
