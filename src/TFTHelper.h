@@ -28,7 +28,7 @@
 // #define SENSOR_RST  8
 
 #define EPD_EXPIRATION_TIME     5 /* seconds */
-#define TFT_EXPIRATION_TIME     7 /* seconds for Text display*/ 
+#define TFT_EXPIRATION_TIME     10 /* seconds for Text and Radar display - grey out */ 
 
 #define NO_DATA_TEXT            "NO DATA"
 #define NO_FIX_TEXT             "GPS NO FIX "

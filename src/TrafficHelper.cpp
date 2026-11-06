@@ -47,7 +47,8 @@ void Traffic_Add()
 
     float vfilt = 0;
     switch (settings->filter) {
-      case TRAFFIC_FILTER_500M:  vfilt =  500.0f; break;
+      case TRAFFIC_FILTER_500M:
+      case TRAFFIC_FILTER_ALARM: vfilt =  500.0f; break;
       case TRAFFIC_FILTER_1000M: vfilt = 1000.0f; break;
       case TRAFFIC_FILTER_3500FT: vfilt = 1066.8f; break;
       case TRAFFIC_FILTER_5000FT: vfilt = 1524.0f; break;
@@ -247,9 +248,9 @@ static void Traffic_Voice_One(traffic_t *fop)
         snprintf(message, sizeof(message), "%s %s %s",
              (fop->alarm_level < ALARM_LEVEL_URGENT ? WARNING_WORD1 : WARNING_WORD3),
              where, (voc_alt > 70 ? "high" : voc_alt < -70 ? "low" : "level"));
-        settings->voice = VOICE_2;  // Use voice2 instead of voice3
-        // Only play audio if voice alerts are enabled
+        // Only touch/play audio if voice alerts are enabled
         if (settings->voice_alerts) {
+          settings->voice = VOICE_2;  // Use voice2 instead of voice3
 #if defined(AUDIO)
           SoC->TTS(message);
 #endif
@@ -321,9 +322,9 @@ static void Traffic_Voice_One(traffic_t *fop)
                 "%s %s %s %s",           // was "traffic %s distance %s altitude %s"
                 ADVISORY_WORD, where, how_far, elev);
 
-    settings->voice = VOICE_1;  // slower male voice
-    // Only play audio if voice alerts are enabled
+    // Only touch/play audio if voice alerts are enabled
     if (settings->voice_alerts) {
+      settings->voice = VOICE_1;  // slower male voice
 #if defined(AUDIO)
       SoC->TTS(message);
 #endif
@@ -392,7 +393,7 @@ static void Traffic_Voice()
       return;
 
   /* do issue voice advisories for non-alarm traffic, if no alarms */
-  if (sound_advisory_ndx >= 0 && settings->filter < TRAFFIC_FILTER_ALARM) {
+  if (sound_advisory_ndx >= 0 && settings->filter != TRAFFIC_FILTER_ALARM) {
       traffic_t *fop = &Container[sound_advisory_ndx];
       Traffic_Voice_One(fop);
       fop->alert |= TRAFFIC_ALERT_VOICE;

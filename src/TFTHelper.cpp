@@ -493,7 +493,8 @@ void settings_page_1() {
       settings->filter == TRAFFIC_FILTER_500M   ? "500m" :
       settings->filter == TRAFFIC_FILTER_1000M  ? "1000m" :
       settings->filter == TRAFFIC_FILTER_3500FT ? "3500ft" :
-      settings->filter == TRAFFIC_FILTER_5000FT ? "5000ft" : "OFF");
+      settings->filter == TRAFFIC_FILTER_5000FT ? "5000ft" :
+      settings->filter == TRAFFIC_FILTER_ALARM  ? "Alarm" : "OFF");
 
     text_y = 155;
     sprite.setCursor(button_x - 300, text_y);

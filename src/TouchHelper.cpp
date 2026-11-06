@@ -226,8 +226,12 @@ void tapHandler(int x, int y) {
     } else if (settings_page_number == 2) {
       // Voice Alerts toggle
       settings->voice_alerts = !settings->voice_alerts;
+      if (settings->voice_alerts && settings->voice == VOICE_OFF) {
+        // voice_alerts alone can't produce sound while voice pack is OFF - enable a default pack
+        settings->voice = VOICE_1;
+      }
       EEPROM_store();
-      Serial.printf("Voice alerts toggled: %s\n", settings->voice_alerts ? "ON" : "OFF");
+      Serial.printf("Voice alerts toggled: %s (voice pack=%d)\n", settings->voice_alerts ? "ON" : "OFF", settings->voice);
       settings_page();
     }
   }

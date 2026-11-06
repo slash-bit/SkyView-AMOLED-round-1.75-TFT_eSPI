@@ -220,6 +220,8 @@ void setup()
   SoC->DB_init();
 #endif
 #if defined(AUDIO)
+  Serial.print(F("Audio: voice setting is "));
+  Serial.println(settings->voice == VOICE_OFF ? F("OFF (TTS disabled)") : F("ON"));
   char buf[8];
   strcpy(buf,"POST");
   SoC->TTS(buf);

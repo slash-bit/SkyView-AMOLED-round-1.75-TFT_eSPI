@@ -445,7 +445,8 @@ static void TFT_Draw_Radar()
             settings->filter == TRAFFIC_FILTER_500M   ? "500m" :
             settings->filter == TRAFFIC_FILTER_1000M  ? "1km" :
             settings->filter == TRAFFIC_FILTER_3500FT ? "3.5k'" :
-            settings->filter == TRAFFIC_FILTER_5000FT ? "5k'" : "";
+            settings->filter == TRAFFIC_FILTER_5000FT ? "5k'" :
+            settings->filter == TRAFFIC_FILTER_ALARM  ? "500m" : "";
           sprite.drawString(filt_str, x, y, 4);
         }
         // Draw crosshair in radar center
@@ -592,6 +593,9 @@ static void TFT_Draw_Radar()
         Serial.println("Debug | ");
         // Serial.flush();
 #endif
+        String initials = BuddyManager::getBuddyInitials(Container[i].ID);
+        bool isBuddy = (initials != "  ");
+
         if (settings->icon_style == ICON_STYLE_ARROWHEAD)
         {
             if (!arrowSprite.created())
@@ -604,8 +608,6 @@ static void TFT_Draw_Radar()
             arrowSprite.fillTriangle(4, 31, 18, 3, 32, 31, color);
             arrowSprite.fillTriangle(11, 31, 18, 20, 25, 31, TFT_BLACK);
 
-            String initials = BuddyManager::getBuddyInitials(Container[i].ID);
-            bool isBuddy = (initials != "  ");
             if (isBuddy)
             {
               if (blink)
@@ -713,12 +715,8 @@ static void TFT_Draw_Radar()
               break;
           }
 
-          {
-            String initials = BuddyManager::getBuddyInitials(Container[i].ID);
-            bool isBuddy = (initials != "  ");
-            if (isBuddy && blink) {
-              sprite.drawSmoothCircle(radar_center_x + x, radar_center_y - y, 25, TFT_WHITE, TFT_BLACK);
-            }
+          if (isBuddy && blink) {
+            sprite.drawSmoothCircle(radar_center_x + x, radar_center_y - y, 25, TFT_WHITE, TFT_BLACK);
           }
 
           if (settings->show_thermals && Container[i].ClimbRate >= 1.5) {
@@ -737,7 +735,7 @@ static void TFT_Draw_Radar()
           altSprite.fillSprite(TFT_BLACK);
           altSprite.setTextColor(TFT_WHITE, TFT_BLACK);
           altSprite.setTextDatum(MC_DATUM);
-          altSprite.drawString(rel_vertical_str, 42, 13, 4);
+          altSprite.drawString(isBuddy ? initials : String(rel_vertical_str), 42, 13, 4);
           altSprite.pushToSprite(&sprite, radar_center_x + x + 25, radar_center_y - y - 13, TFT_BLACK);
         }
 

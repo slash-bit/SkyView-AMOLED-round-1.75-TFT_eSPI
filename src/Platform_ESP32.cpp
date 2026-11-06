@@ -38,6 +38,8 @@
 #include "SkyView.h"
 #include <FS.h>
 #include <SD.h>
+#include <LittleFS.h>
+#include <esp_ota_ops.h>
 #include <battery.h>
 #include "BatteryHelper.h"
 // #include <SD.h>
@@ -160,6 +162,112 @@ static union {
 // Dedicated SPI bus for SD card on LilyGo to prevent conflicts
 SPIClass SD_SPI(HSPI);
 #endif
+
+// Filesystem the voice WAV files are played from: internal flash first, SD card as fallback
+static fs::FS *audioFS       = NULL;
+static bool    audioFS_is_SD = false;
+static bool    audio_flash_mounted = false;
+
+bool ESP32_Audio_flash_begin()
+{
+  if (!audio_flash_mounted) {
+    // formatOnFail = true: a freshly partitioned board gets an empty filesystem ready for upload
+    audio_flash_mounted = LittleFS.begin(true, AUDIO_FLASH_MOUNT, 5, AUDIO_FLASH_PARTITION);
+    if (audio_flash_mounted) {
+      Serial.printf("AUDIO: flash partition mounted, %u / %u KB used\n",
+                    (unsigned) (LittleFS.usedBytes() / 1024), (unsigned) (LittleFS.totalBytes() / 1024));
+    } else {
+      Serial.println("AUDIO: no 'audio' flash partition (old partition table?)");
+    }
+  }
+  return audio_flash_mounted;
+}
+
+bool ESP32_Audio_flash_has_voices()
+{
+  return audio_flash_mounted && LittleFS.exists("/Audio");
+}
+
+void ESP32_Audio_use_flash()
+{
+  if (ESP32_Audio_flash_has_voices()) {
+    audioFS       = &LittleFS;
+    audioFS_is_SD = false;
+  }
+}
+
+bool ESP32_Audio_flash_erase()
+{
+  if (!audio_flash_mounted) {
+    return false;
+  }
+  if (!audioFS_is_SD) {
+    audioFS = NULL;   // stop playback from flash while it is being wiped
+  }
+  return LittleFS.format();
+}
+
+const char *ESP32_Audio_source()
+{
+  return audioFS == NULL ? "none" : (audioFS_is_SD ? "sd" : "flash");
+}
+
+#if defined(SD_CARD)
+static bool ESP32_SD_begin()
+{
+  // Initialize dedicated SPI bus for SD card to prevent conflicts with other peripherals
+  // LilyGo AMOLED uses SD card on separate SPI pins (38-41)
+  Serial.println("Initializing SD card on dedicated SPI bus...");
+
+#if defined(LILYGO_AMOLED_1_75)
+  SD_SPI.begin(SD_SCLK, SD_MISO, SD_MOSI, SD_CS);
+#else
+  SPI.begin(SD_SCLK, SD_MISO, SD_MOSI, SD_CS);
+#endif
+
+  delay(100);  // Give SD card time to power up
+
+  // Try to begin SD with reduced frequency (4MHz) for better stability
+  const uint32_t SD_INIT_FREQ = 4000000;  // 4MHz for initialization
+
+#if defined(LILYGO_AMOLED_1_75)
+  if (!SD.begin(SD_CS, SD_SPI, SD_INIT_FREQ)) {
+#else
+  if (!SD.begin(SD_CS, SPI, SD_INIT_FREQ)) {
+#endif
+      Serial.println("Card Mount Failed!");
+      return false;
+  }
+
+  delay(50);  // Allow SD card to stabilize after mount
+
+  uint8_t cardType = SD.cardType();
+  if (cardType == CARD_NONE) {
+      Serial.println("No SD card attached!");
+      return false;
+  }
+
+  Serial.println("SD card detected.");
+  Serial.print("SD Card Type: ");
+  switch (cardType) {
+      case CARD_SD:
+          Serial.println("SD");
+          break;
+      case CARD_SDHC:
+          Serial.println("SDHC");
+          break;
+
+      default:
+          Serial.println("Unknown");
+          break;
+  }
+  uint64_t cardSize = SD.cardSize() / (1024 * 1024);
+  Serial.printf("SD Card Size: %lluMB\n", cardSize);
+
+  Serial.println("SD card initialized.");
+  return true;
+}
+#endif //SD_CARD
 
 #if defined(AUDIO)
 static uint8_t sdcard_files_to_open = 0;
@@ -410,60 +518,28 @@ static void ESP32_setup()
   delay(100);  // Allow button pull-ups to stabilize
 #endif
 
-  // Initialise SD card.
+  // Select where voice WAV files come from: internal flash first, SD card as fallback
+  if (ESP32_Audio_flash_begin() && ESP32_Audio_flash_has_voices()) {
+    ESP32_Audio_use_flash();
+    Serial.println("AUDIO: using voice files from internal flash");
+  } else {
 #if defined(SD_CARD)
-  // Initialize dedicated SPI bus for SD card to prevent conflicts with other peripherals
-  // LilyGo AMOLED uses SD card on separate SPI pins (38-41)
-  Serial.println("Initializing SD card on dedicated SPI bus...");
-
-#if defined(LILYGO_AMOLED_1_75)
-  SD_SPI.begin(SD_SCLK, SD_MISO, SD_MOSI, SD_CS);
-#else
-  SPI.begin(SD_SCLK, SD_MISO, SD_MOSI, SD_CS);
-#endif
-
-  delay(100);  // Give SD card time to power up
-
-  // Try to begin SD with reduced frequency (4MHz) for better stability
-  const uint32_t SD_INIT_FREQ = 4000000;  // 4MHz for initialization
-
-#if defined(LILYGO_AMOLED_1_75)
-  if (!SD.begin(SD_CS, SD_SPI, SD_INIT_FREQ)) {
-#else
-  if (!SD.begin(SD_CS, SPI, SD_INIT_FREQ)) {
-#endif
-      Serial.println("Card Mount Failed!");
-      return;
-  }
-
-  delay(50);  // Allow SD card to stabilize after mount
-
-  uint8_t cardType = SD.cardType();
-  if (cardType == CARD_NONE) {
-      Serial.println("No SD card attached!");
-      return;
-  }
-  else {
-      Serial.println("SD card detected.");
-      Serial.print("SD Card Type: ");
-      switch (cardType) {
-          case CARD_SD:
-              Serial.println("SD");
-              break;
-          case CARD_SDHC:
-              Serial.println("SDHC");
-              break;
-
-          default:
-              Serial.println("Unknown");
-              break;
-      }
-      uint64_t cardSize = SD.cardSize() / (1024 * 1024);
-      Serial.printf("SD Card Size: %lluMB\n", cardSize);
-  }
-
-  Serial.println("SD card initialized.");
+    if (ESP32_SD_begin()) {
+      audioFS       = &SD;
+      audioFS_is_SD = true;
+      Serial.println("AUDIO: using voice files from SD card");
+    }
 #endif //SD_CARD
+  }
+
+#if defined(AUDIO)
+  if (audioFS == NULL) {
+    Serial.println("AMP: no voice files on flash or SD card, disabling voice/audio.");
+    Serial.println("AMP: upload the Audio folder via the web interface (Files page).");
+    settings->voice        = VOICE_OFF;
+    settings->voice_alerts = false;
+  }
+#endif
 
 #if defined(AUDIO)
   // Initialize amplifier enable pin
@@ -559,7 +635,9 @@ static void ESP32_swSer_enableRx(boolean arg)
 
 static uint32_t ESP32_maxSketchSpace()
 {
-  return 0x3F0000;
+  // size of the OTA slot the next update goes into (see partitions.csv)
+  const esp_partition_t *next = esp_ota_get_next_update_partition(NULL);
+  return next ? next->size : 0x2C0000;
 }
 
 static void ESP32_WiFiUDP_stopAll()
@@ -1127,7 +1205,10 @@ static bool play_file(char *filename, int volume)
     // Try to open the file directly without checking cardType()
     // cardType() can trigger unwanted remount attempts
     // SPI bus should be initialized once per TTS call, not per file
-    File wavfile = SD.open(filename);
+    if (audioFS == NULL) {
+      return false;
+    }
+    File wavfile = audioFS->open(filename);
     if (! wavfile) {
       Serial.print(F("Error opening WAV file: "));
       Serial.println(filename);
@@ -1181,8 +1262,21 @@ static bool play_file(char *filename, int volume)
           state = DATA;
         }
         //initialize i2s with configurations above
-        i2s_driver_install((i2s_port_t)i2s_num, &i2s_config, 0, NULL);
-        i2s_set_pin((i2s_port_t)i2s_num, &pin_config);
+        // Note: the MAX98357A amp has no I2C control bus, so there is no way to
+        // handshake/detect its presence in software - these calls only confirm
+        // the ESP32 side (I2S driver + GPIO) succeeded, not that an amp is attached.
+        {
+          esp_err_t err;
+          err = i2s_driver_install((i2s_port_t)i2s_num, &i2s_config, 0, NULL);
+          if (err != ESP_OK) {
+            Serial.printf("AMP: i2s_driver_install failed (err=%d)\n", err);
+          }
+          err = i2s_set_pin((i2s_port_t)i2s_num, &pin_config);
+          if (err != ESP_OK) {
+            Serial.printf("AMP: i2s_set_pin failed (err=%d)\n", err);
+          }
+          Serial.printf("AMP: I2S configured, sample rate %u Hz\n", wavProps.sampleRate);
+        }
         i2s_zero_dma_buffer((i2s_port_t)i2s_num);  // Clear DMA buffer to prevent noise
         //set sample rates of i2s to sample rate of wav file
         i2s_set_sample_rates((i2s_port_t)i2s_num, wavProps.sampleRate);
@@ -1226,11 +1320,14 @@ void audioTask(void *parameter) {
 
 #if defined(SD_CARD) && defined(LILYGO_AMOLED_1_75)
       // Reinitialize SD SPI bus before first access
-      SD_SPI.begin(SD_SCLK, SD_MISO, SD_MOSI, SD_CS);
-      delay(50);
+      if (audioFS_is_SD) {
+        SD_SPI.begin(SD_SCLK, SD_MISO, SD_MOSI, SD_CS);
+        delay(50);
+      }
 #endif
 
-      // Enable audio amplifier
+      // Enable audio amplifier (MAX98357A SD pin - no I2C, so no presence handshake exists)
+      Serial.println("AMP: enabling (GPIO SD pin HIGH)");
       digitalWrite(SOC_GPIO_AMP_ENABLE, HIGH);
       delay(200);  // Give amplifier time to power up
 
@@ -1267,6 +1364,7 @@ void audioTask(void *parameter) {
       }
 
       // Disable amplifier after playback
+      Serial.println("AMP: disabling (GPIO SD pin LOW)");
       digitalWrite(SOC_GPIO_AMP_ENABLE, LOW);
     }
   }
@@ -1277,11 +1375,9 @@ static void ESP32_TTS(char *message)
     if (settings->voice == VOICE_OFF)
       return;
 
-#if !defined(SD_CARD)
-    // Audio requires SD card support
-    Serial.println(F("Audio requires SD_CARD to be defined"));
-    return;
-#endif
+    // Voice files must be on internal flash or SD card
+    if (audioFS == NULL)
+      return;
 
     // Check if audio task and queue are initialized
     if (audioQueue == NULL || audioTaskHandle == NULL) {
