@@ -739,7 +739,15 @@ static void TFT_Draw_Radar()
           altSprite.pushToSprite(&sprite, radar_center_x + x + 25, radar_center_y - y - 13, TFT_BLACK);
         }
 
-        if (level && Container[i].distance < 3000) {
+        // proximity warning limits per aircraft type (same as before the arrowhead rewrite)
+        float prox_vert = 0, prox_dist = 0;
+        switch (Container[i].AcftType) {
+          case 1:                    prox_vert =  500; prox_dist = 2000; break;  // glider
+          case 2: case 3: case 5: case 8: prox_vert = 500; prox_dist = 3000; break; // tow, heli, drop, GA
+          case 9: case 10:           prox_vert = 1000; prox_dist = 5000; break;  // powered aircraft
+          default: break;                                                        // HG, PG, balloon, other: none
+        }
+        if (prox_dist > 0 && Container[i].RelativeVertical < prox_vert && Container[i].distance < prox_dist) {
           if (blink) {
             sprite.drawSmoothCircle(radar_center_x + x, radar_center_y - y, 10, color, TFT_BLACK);
             sprite.drawSmoothCircle(radar_center_x + x, radar_center_y - y, 20, color, TFT_BLACK);
