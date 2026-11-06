@@ -45,8 +45,18 @@ void Traffic_Add()
         return;
     }
 
+    float vfilt = 0;
+    switch (settings->filter) {
+      case TRAFFIC_FILTER_500M:
+      case TRAFFIC_FILTER_ALARM: vfilt =  500.0f; break;
+      case TRAFFIC_FILTER_1000M: vfilt = 1000.0f; break;
+      case TRAFFIC_FILTER_3500FT: vfilt = 1066.8f; break;
+      case TRAFFIC_FILTER_5000FT: vfilt = 1524.0f; break;
+      default: break;
+    }
+
     if ( settings->filter == TRAFFIC_FILTER_OFF  ||
-        (fo.RelativeVertical > -500 && fo.RelativeVertical <  500) ) {
+        (fo.RelativeVertical > -vfilt && fo.RelativeVertical < vfilt) ) {
 
       int i;
 
@@ -383,7 +393,7 @@ static void Traffic_Voice()
       return;
 
   /* do issue voice advisories for non-alarm traffic, if no alarms */
-  if (sound_advisory_ndx >= 0 && settings->filter < TRAFFIC_FILTER_ALARM) {
+  if (sound_advisory_ndx >= 0 && settings->filter != TRAFFIC_FILTER_ALARM) {
       traffic_t *fop = &Container[sound_advisory_ndx];
       Traffic_Voice_One(fop);
       fop->alert |= TRAFFIC_ALERT_VOICE;
