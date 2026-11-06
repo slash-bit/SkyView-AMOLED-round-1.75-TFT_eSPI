@@ -117,6 +117,17 @@ const uint8_t BUTTON_MODE_PIN = 0;
 #define MAX_FILENAME_LEN      64
 #define WAV_FILE_PREFIX       "/Audio/"
 
+/* Voice WAV files live in a dedicated LittleFS partition (see partitions.csv);
+   the SD card is only tried when that partition holds no /Audio folder */
+#define AUDIO_FLASH_PARTITION "audio"
+#define AUDIO_FLASH_MOUNT     "/audiofs"
+
+extern bool ESP32_Audio_flash_begin();         // mount the audio partition (formats it if blank)
+extern bool ESP32_Audio_flash_has_voices();    // true if /Audio exists on the audio partition
+extern void ESP32_Audio_use_flash();           // switch playback to flash (after a web upload)
+extern bool ESP32_Audio_flash_erase();         // wipe the audio partition
+extern const char *ESP32_Audio_source();       // "flash", "sd" or "none"
+
 #define POWER_SAVING_WIFI_TIMEOUT 300000UL /* 5 minutes */
 
 /* these are data structures to process wav file */
