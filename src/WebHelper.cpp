@@ -567,21 +567,36 @@ void handleSettings() {
     "<div class='form-row'><label>Traffic filter</label><select name='filter'>"
     "<option %s value='%d'>Unfiltered</option>"
     "<option %s value='%d'>Altitude (&#177;500 m)</option>"
+    "<option %s value='%d'>Altitude (&#177;1000 m)</option>"
+    "<option %s value='%d'>Altitude (&#177;3500 ft)</option>"
+    "<option %s value='%d'>Altitude (&#177;5000 ft)</option>"
     "<option %s value='%d'>Alarm only</option>"
-    "</select></div>"
+    "</select></div>"),
+    (settings->compass    == COMPASS_ON            ? "selected" : ""), COMPASS_ON,
+    (settings->compass    == COMPASS_OFF           ? "selected" : ""), COMPASS_OFF,
+    (settings->filter     == TRAFFIC_FILTER_OFF    ? "selected" : ""), TRAFFIC_FILTER_OFF,
+    (settings->filter     == TRAFFIC_FILTER_500M   ? "selected" : ""), TRAFFIC_FILTER_500M,
+    (settings->filter     == TRAFFIC_FILTER_1000M  ? "selected" : ""), TRAFFIC_FILTER_1000M,
+    (settings->filter     == TRAFFIC_FILTER_3500FT ? "selected" : ""), TRAFFIC_FILTER_3500FT,
+    (settings->filter     == TRAFFIC_FILTER_5000FT ? "selected" : ""), TRAFFIC_FILTER_5000FT,
+    (settings->filter     == TRAFFIC_FILTER_ALARM  ? "selected" : ""), TRAFFIC_FILTER_ALARM);
+  server.sendContent(buf);
+
+  snprintf_P(buf, sizeof(buf), PSTR(
     "<div class='form-row'><label>Power save</label><select name='power_save'>"
     "<option %s value='%d'>Disabled</option>"
     "<option %s value='%d'>WiFi OFF (5 min.)</option>"
     "</select></div>"
+    "<div class='form-row'><label>Display rotation</label><select name='rotation'>"
+    "<option %s value='0'>0&#176;</option>"
+    "<option %s value='2'>180&#176;</option>"
+    "</select></div>"
     "<div class='form-row'><label>Team Member ID</label>"
     "<input type='text' name='team' maxlength='6' value='%06X'></div>"),
-    (settings->compass    == COMPASS_ON           ? "selected" : ""), COMPASS_ON,
-    (settings->compass    == COMPASS_OFF          ? "selected" : ""), COMPASS_OFF,
-    (settings->filter     == TRAFFIC_FILTER_OFF   ? "selected" : ""), TRAFFIC_FILTER_OFF,
-    (settings->filter     == TRAFFIC_FILTER_500M  ? "selected" : ""), TRAFFIC_FILTER_500M,
-    (settings->filter     == TRAFFIC_FILTER_ALARM ? "selected" : ""), TRAFFIC_FILTER_ALARM,
-    (settings->power_save == POWER_SAVE_NONE      ? "selected" : ""), POWER_SAVE_NONE,
-    (settings->power_save == POWER_SAVE_WIFI      ? "selected" : ""), POWER_SAVE_WIFI,
+    (settings->power_save == POWER_SAVE_NONE       ? "selected" : ""), POWER_SAVE_NONE,
+    (settings->power_save == POWER_SAVE_WIFI       ? "selected" : ""), POWER_SAVE_WIFI,
+    (settings->rotation == 0 ? "selected" : ""),
+    (settings->rotation == 2 ? "selected" : ""),
     settings->team);
   server.sendContent(buf);
 
@@ -621,6 +636,7 @@ void handleInput() {
     else if (server.argName(i).equals("compass"))     settings->compass     = server.arg(i).toInt();
     else if (server.argName(i).equals("filter"))      settings->filter      = server.arg(i).toInt();
     else if (server.argName(i).equals("power_save"))  settings->power_save  = server.arg(i).toInt();
+    else if (server.argName(i).equals("rotation"))    settings->rotation    = server.arg(i).toInt();
     else if (server.argName(i).equals("team")) {
       char buf[7];
       server.arg(i).toCharArray(buf, sizeof(buf));

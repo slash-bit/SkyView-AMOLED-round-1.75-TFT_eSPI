@@ -79,7 +79,7 @@ void TFT_compass_loop() {
             compas2Sprite.setPivot(233, 233);
             compasSprite.pushRotated(&compas2Sprite, 360 - ThisAircraft.Track, TFT_BLACK);
 
-            lcd_PushColors(6, 0, 466, 466, (uint16_t*)compas2Sprite.getPointer());
+            lcd_PushColors(display_column_offset, display_row_offset, 466, 466, (uint16_t*)compas2Sprite.getPointer());
             
             xSemaphoreGive(spiMutex);
             delay(100);
