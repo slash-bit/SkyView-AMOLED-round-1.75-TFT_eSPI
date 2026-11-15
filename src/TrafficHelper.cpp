@@ -41,7 +41,7 @@ void Traffic_Add()
     // Traffic_Update(&fo);    // already done in NMEAHelper.cpp
     float fo_distance = fo.distance;
 
-    if (fo_distance > ALARM_ZONE_NONE) {
+    if (fo_distance > TRAFFIC_TRACK_RANGE) {
         return;
     }
 
