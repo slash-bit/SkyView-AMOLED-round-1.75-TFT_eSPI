@@ -80,6 +80,7 @@ typedef struct traffic_by_dist_struct {
 } traffic_by_dist_t;
 
 #define ALARM_ZONE_NONE         5000  // meters
+#define TRAFFIC_TRACK_RANGE     100000 // meters; targets farther than this are not tracked
 #define ALARM_ZONE_CLOSE        3000
 
 #define VERTICAL_SLOPE          5  /* slope effect for alerts */
